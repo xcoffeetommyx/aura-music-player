@@ -1189,6 +1189,11 @@ body.is-playing .vis-bars:hover{opacity:1}
     0 0 40px rgba(0,212,232,0.15);
   animation:vinyl-spin 4s linear infinite;
   animation-play-state:paused;
+  /* Prevent browser native long-press image menu */
+  -webkit-touch-callout:none;
+  -webkit-user-select:none;
+  user-select:none;
+  cursor:pointer;
 }
 .np-art.spinning{animation-play-state:running}
 .np-art img{width:100%;height:100%;object-fit:cover}
@@ -2439,17 +2444,11 @@ body.is-playing .vis-bars:hover{opacity:1}
       <canvas id="np-vis-canvas"></canvas>
       <div class="np-vinyl">
         <div class="np-disc" id="np-disc"></div>
-        <div class="np-art" id="np-art-circle"
-             onmousedown="startArtLongPress(event)"
-             onmouseup="cancelArtLongPress()"
-             onmouseleave="cancelArtLongPress()"
-             ontouchstart="startArtLongPress(event)"
-             ontouchend="cancelArtLongPress()"
-             ontouchmove="cancelArtLongPress()">
+        <div class="np-art" id="np-art-circle">
           <div class="np-art-ph" id="np-art-ph">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
           </div>
-          <img id="np-art-img" style="display:none;width:100%;height:100%;object-fit:cover" alt="">
+          <img id="np-art-img" style="display:none;width:100%;height:100%;object-fit:cover;-webkit-user-drag:none;pointer-events:none" alt="" draggable="false">
           <!-- Long-press hint -->
           <div class="np-art-edit-hint" id="np-art-edit-hint">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -2996,7 +2995,6 @@ function updatePlayerUI(track){
     npImg.src=track.artData;  npImg.style.display='block';  npPh.style.display='none';
     miniImg.src=track.artData;miniImg.style.display='block';miniPh.style.display='none';
     if(glow) glow.style.display='block';
-    // Blurred NP background
     if(npBgArt) npBgArt.style.backgroundImage=`url(${track.artData})`;
   } else {
     artImg.style.display='none'; artPh.style.display='flex';
@@ -3004,6 +3002,15 @@ function updatePlayerUI(track){
     miniImg.style.display='none';miniPh.style.display='flex';
     if(glow) glow.style.display='none';
     if(npBgArt) npBgArt.style.backgroundImage='none';
+  }
+  // Update hint label: "Add Art" when empty, "Change Art" when art exists
+  const hintEl=document.getElementById('np-art-edit-hint');
+  if(hintEl){
+    const hintSpan=hintEl.querySelector('span')||hintEl;
+    // Only update the text node (last child), preserve the SVG
+    const nodes=[...hintEl.childNodes];
+    const txtNode=nodes.find(n=>n.nodeType===3&&n.textContent.trim());
+    if(txtNode) txtNode.textContent=track.artData?' Change Art':' Add Art';
   }
 
   const isFav=favorites.has(currentTrackId);
@@ -4288,8 +4295,28 @@ async function saveLyrics(){
 
 // ==================== ART LONG-PRESS ====================
 let artLongPressTimer=null;
+// ── ART LONG-PRESS (wired in JS so we can use passive:false + block contextmenu) ──
+(function initArtLongPress(){
+  const art=document.getElementById('np-art-circle');
+  if(!art)return;
+
+  // Block browser's native image context menu entirely on this element
+  art.addEventListener('contextmenu',e=>e.preventDefault(),false);
+
+  art.addEventListener('mousedown',e=>{startArtLongPress(e)});
+  art.addEventListener('mouseup',()=>cancelArtLongPress());
+  art.addEventListener('mouseleave',()=>cancelArtLongPress());
+
+  // Non-passive so we can call preventDefault() to suppress the native long-press popup
+  art.addEventListener('touchstart',e=>{
+    e.preventDefault(); // ← kills browser image context menu
+    startArtLongPress(e);
+  },{passive:false});
+  art.addEventListener('touchend',()=>cancelArtLongPress(),{passive:true});
+  art.addEventListener('touchmove',()=>cancelArtLongPress(),{passive:true});
+})();
+
 function startArtLongPress(e){
-  if(!currentTrackId) return;
   const hint=document.getElementById('np-art-edit-hint');
   const art=document.getElementById('np-art-circle');
   hint.classList.add('show');
@@ -4305,13 +4332,13 @@ function cancelArtLongPress(){
   artLongPressTimer=null;
   const hint=document.getElementById('np-art-edit-hint');
   const art=document.getElementById('np-art-circle');
-  hint.classList.remove('show');
-  delete art.dataset.pressing;
+  if(hint)hint.classList.remove('show');
+  if(art)delete art.dataset.pressing;
 }
 function showChangeArtPopup(){
-  // Build the same style overlay as editTrackField
   const overlay=document.createElement('div');
   overlay.className='edit-field-overlay';
+  const hasArt=!!currentTrackId&&!!tracks.find(t=>t.id===currentTrackId)?.artData;
   overlay.innerHTML=`
     <div class="edit-field-box" style="gap:0;padding:0;overflow:hidden;max-width:280px">
       <div style="padding:18px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.07)">
@@ -4324,12 +4351,12 @@ function showChangeArtPopup(){
         transition:background .15s;text-align:left;
       ">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;flex-shrink:0;color:var(--accent2)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        Change Album Art
+        ${hasArt?'Change Album Art':'Add Album Art'}
       </button>
       <div style="height:1px;background:rgba(255,255,255,0.07)"></div>
       <button id="art-popup-cancel" style="
         width:100%;background:none;border:none;cursor:pointer;
-        padding:14px 20px;display:flex;align-items:center;justify-content:center;gap:10px;
+        padding:14px 20px;display:flex;align-items:center;justify-content:center;
         color:var(--text-muted);font-size:13px;font-family:'Outfit',sans-serif;
         transition:background .15s;
       ">Cancel</button>
