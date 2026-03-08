@@ -414,7 +414,7 @@ body::after{
   display:grid;
   grid-template-columns:52px 1fr auto auto auto;
   align-items:center;gap:12px;
-  padding:9px 14px;
+  padding:9px 16px;
   border-radius:12px;
   cursor:pointer;
   transition:all var(--transition);
@@ -1716,15 +1716,15 @@ body.is-playing .vis-bars:hover{opacity:1}
   #search{width:130px}
   #search:focus{width:170px}
   .grid-4{grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:12px}
-  .track-row{grid-template-columns:28px 46px 1fr auto auto;gap:10px;padding:8px 10px}
+  .track-row{grid-template-columns:52px 1fr auto auto auto;gap:10px;padding:8px 12px}
   .pl-detail-name{font-size:26px}
   .pl-detail-art{width:120px;height:120px}
   .np-body{padding:12px 24px 20px;gap:16px}
 }
 @media(max-width:400px){
   .grid-4{grid-template-columns:repeat(2,1fr)}
-  .track-row{grid-template-columns:44px 1fr auto;gap:8px;padding:7px 8px}
-  .track-more,.track-dur{display:none}
+  .track-row{grid-template-columns:48px 1fr auto;gap:8px;padding:7px 10px}
+  .track-fav,.track-dur{display:none}
 }
 @media(min-width:769px){
   #main{padding-bottom:var(--player-h)}
@@ -2199,18 +2199,21 @@ body.is-playing .vis-bars:hover{opacity:1}
 .track-row:hover .track-queue-handle{opacity:1}
 .track-row:active .track-queue-handle,.track-queue-handle:active{cursor:grabbing}
 .track-queue-handle svg{width:16px;height:16px}
-/* Queue view track rows get wider first col for drag handle */
+/* Queue view track rows get drag handle column */
 #queue-view-list .track-row{
-  grid-template-columns:28px 50px 1fr auto auto auto;
-}
-/* Hide the playing-anim number col in queue view (no track number) */
-#queue-view-list .track-row .track-num{display:none}
-/* Queue view drag handle replaces number column */
-#queue-view-list .track-row{
-  grid-template-columns:28px 52px 1fr auto auto auto;
+  grid-template-columns:30px 52px 1fr auto auto auto;
 }
 #queue-view-list .track-row .q-drag-handle{
-  width:28px;display:flex;align-items:center;justify-content:center;
+  width:30px;display:flex;align-items:center;justify-content:center;opacity:0.5;
+}
+#queue-view-list .track-row .q-drag-handle:hover,
+#queue-view-list .track-row .q-drag-handle:active{opacity:1;cursor:grab}
+/* Always show track-more dots in queue view */
+#queue-view-list .track-row .track-more{
+  opacity:1 !important;color:rgba(255,255,255,0.4);
+}
+#queue-view-list .track-row .track-more:hover{
+  color:var(--text);background:var(--accent-glow3);
 }
 </style>
 </head>
@@ -3635,10 +3638,7 @@ function renderQueueView(c){
     const isFav=favorites.has(t.id);
     return `<div class="track-row ${isPlaying?'playing':''}" data-qi="${i}" data-id="${t.id}" draggable="true"
       onclick="queueIndex=${i};playTrack(${t.id})"
-      oncontextmenu="showTrackMenu(${t.id},event);return false"
-      ontouchstart="startTrackLongPress(${t.id},event)"
-      ontouchend="cancelTrackLongPress(event)"
-      ontouchmove="cancelTrackLongPress(event)">
+      oncontextmenu="showTrackMenu(${t.id},event);return false">
       <div class="q-drag-handle track-queue-handle" onclick="event.stopPropagation()" title="Drag to reorder">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/></svg>
       </div>
