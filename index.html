@@ -9,10 +9,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Aura Music Player</title>
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <!-- METADATA PARSERS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
@@ -326,105 +322,6 @@ body::after{
 }
 .add-btn:active{transform:translateY(0) scale(0.98)}
 .add-btn svg{width:15px;height:15px}
-
-.install-btn{
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  width:100%;padding:10px;margin-top:10px;
-  background:rgba(16,25,46,0.6);
-  border:1px solid rgba(0,212,232,0.15);
-  border-radius:var(--radius);
-  color:var(--text);
-  font-size:13px;font-weight:600;
-  cursor:pointer;transition:all var(--transition);
-  font-family:'Outfit',sans-serif;
-  backdrop-filter:blur(10px);
-  -webkit-tap-highlight-color:transparent;
-}
-.install-btn:hover{
-  background:rgba(0,212,232,0.08);
-  border-color:rgba(0,212,232,0.35);
-  box-shadow:0 0 18px rgba(0,212,232,0.12);
-  transform:translateY(-1px);
-}
-.install-btn:active{transform:translateY(0) scale(0.98)}
-.install-btn svg{width:15px;height:15px;flex-shrink:0}
-.install-helper{
-  margin-top:8px;
-  color:var(--text-muted);
-  font-size:11px;
-  line-height:1.45;
-  text-align:center;
-  padding:0 4px;
-}
-.install-guide-overlay{
-  position:fixed;inset:0;z-index:250;
-  background:rgba(0,0,0,.65);
-  backdrop-filter:blur(8px);
-  -webkit-backdrop-filter:blur(8px);
-  display:flex;align-items:center;justify-content:center;
-  padding:20px;
-}
-.install-guide{
-  width:min(460px,100%);
-  background:linear-gradient(180deg,rgba(11,18,32,0.98),rgba(8,13,26,0.98));
-  border:1px solid rgba(0,212,232,0.18);
-  border-radius:22px;
-  box-shadow:0 24px 70px rgba(0,0,0,.55);
-  padding:22px;
-}
-.install-guide-title{
-  font-family:'Exo 2',sans-serif;
-  font-size:22px;font-weight:800;
-  margin-bottom:8px;
-}
-.install-guide-subtitle{
-  color:var(--text-dim);
-  font-size:13px;
-  line-height:1.5;
-  margin-bottom:18px;
-}
-.install-steps{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  margin-bottom:18px;
-}
-.install-step{
-  display:flex;
-  gap:12px;
-  align-items:flex-start;
-  padding:12px 14px;
-  border-radius:16px;
-  background:rgba(16,25,46,0.55);
-  border:1px solid rgba(0,212,232,0.10);
-}
-.install-step-num{
-  width:24px;height:24px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  background:rgba(0,212,232,0.14);
-  color:var(--accent2);
-  font-size:12px;font-weight:700;
-  flex-shrink:0;
-}
-.install-step-text{
-  color:var(--text);
-  font-size:13px;
-  line-height:1.5;
-}
-.install-guide-note{
-  color:var(--text-muted);
-  font-size:12px;
-  line-height:1.45;
-  margin-bottom:18px;
-}
-.install-guide-actions{
-  display:flex;
-  justify-content:flex-end;
-  gap:10px;
-}
-.install-guide-actions .modal-btn{
-  min-width:110px;
-}
 
 /* ─── TOPBAR ────────────────────────────── */
 #topbar{
@@ -1138,6 +1035,40 @@ body.is-playing .vis-bars:hover{opacity:1}
   white-space:nowrap;
 }
 #exit-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* Import progress bar */
+#import-progress{
+  position:fixed;bottom:calc(var(--player-h) + 16px);left:50%;
+  transform:translateX(-50%);
+  z-index:998;width:min(360px,90vw);
+  background:rgba(8,14,28,0.97);
+  border:1px solid rgba(255,255,255,0.1);
+  backdrop-filter:blur(20px);
+  border-radius:16px;padding:16px 18px;
+  box-shadow:0 8px 40px rgba(0,0,0,0.6),0 0 0 1px rgba(0,212,232,0.1);
+  animation:slideUpIn .25s cubic-bezier(0.4,0,0.2,1);
+}
+@keyframes slideUpIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+#import-progress-inner{display:flex;flex-direction:column;gap:10px}
+#import-progress-header{
+  display:flex;align-items:center;gap:8px;
+  color:var(--text);font-size:13px;font-weight:600;
+}
+#import-progress-bar-wrap{
+  width:100%;height:6px;
+  background:rgba(255,255,255,0.08);
+  border-radius:3px;overflow:hidden;
+}
+#import-progress-fill{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  border-radius:3px;
+  box-shadow:0 0 8px rgba(0,212,232,0.5);
+  transition:width .15s ease;
+}
+#import-progress-sub{
+  font-size:11px;color:rgba(255,255,255,0.4);
+  display:flex;justify-content:space-between;
+}
 /* Full-bleed blurred album art background */
 #np-bg{
   position:absolute;inset:0;z-index:0;
@@ -2275,11 +2206,6 @@ body.is-playing .vis-bars:hover{opacity:1}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Add Music
     </button>
-    <button class="install-btn" id="install-btn" onclick="handleInstallAction()" hidden>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><rect x="4" y="18" width="16" height="3" rx="1.5"/></svg>
-      <span id="install-btn-label">Install Aura</span>
-    </button>
-    <div class="install-helper" id="install-helper" hidden></div>
   </div>
 </div>
 
@@ -2551,6 +2477,20 @@ body.is-playing .vis-bars:hover{opacity:1}
 <input type="file" id="art-input" accept="image/*" style="display:none" onchange="handleArtChange(this.files[0])">
 <div id="exit-toast">Press back again to exit</div>
 
+<!-- Import progress overlay -->
+<div id="import-progress" style="display:none">
+  <div id="import-progress-inner">
+    <div id="import-progress-header">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;flex-shrink:0"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      <span id="import-progress-label">Importing...</span>
+    </div>
+    <div id="import-progress-bar-wrap">
+      <div id="import-progress-fill"></div>
+    </div>
+    <div id="import-progress-sub"></div>
+  </div>
+</div>
+
 <!-- BOTTOM NAV (mobile) -->
 <div id="bottom-nav">
   <div class="bnav-item active" id="bnav-library" onclick="navigate('library');setBottomNav('library')">
@@ -2767,21 +2707,42 @@ async function handleFiles(fileList){
   const audioExts=/\.(mp3|flac|ogg|opus|m4a|aac|wav|wma|aiff|ape|webm|mp4|3gp)$/i;
   const files=Array.from(fileList).filter(f=>audioExts.test(f.name)||f.type.startsWith('audio/'));
   if(!files.length){toast('No audio files found');return}
-  toast(`Loading ${files.length} track${files.length>1?'s':''}...`);
-  let added=0;
+
+  // Show import progress UI
+  const prog=document.getElementById('import-progress');
+  const fill=document.getElementById('import-progress-fill');
+  const label=document.getElementById('import-progress-label');
+  const sub=document.getElementById('import-progress-sub');
+  prog.style.display='';
+  fill.style.width='0%';
+  label.textContent=`Importing ${files.length} track${files.length>1?'s':''}…`;
+  sub.innerHTML='<span>Reading files…</span><span>0 / '+files.length+'</span>';
+
+  let added=0, skipped=0, i=0;
   for(const file of files){
+    i++;
+    const pct=Math.round((i/files.length)*100);
+    fill.style.width=pct+'%';
+    sub.innerHTML=`<span>${truncate(file.name,32)}</span><span>${i} / ${files.length}</span>`;
+    // Yield to browser to repaint
+    await new Promise(r=>setTimeout(r,0));
+
     const exists=tracks.find(t=>t.name===file.name&&t.size===file.size);
-    if(exists)continue;
+    if(exists){skipped++;continue;}
     const track=await readFileMeta(file);
     const id=await dbPut('tracks',track);
     track.id=id;
     tracks.push(track);
     added++;
   }
+
+  // Done — hide progress
+  prog.style.display='none';
+
   if(added){
     updateBadges();
     renderCurrentView();
-    toast(`Added ${added} track${added>1?'s':''}`);
+    toast(`Added ${added} track${added>1?'s':''}${skipped?' ('+skipped+' skipped)':''}`);
     if(added===files.length&&tracks.length===added){
       playTrack(tracks[0].id,true);
     }
@@ -2789,6 +2750,8 @@ async function handleFiles(fileList){
     toast('All files already in library');
   }
 }
+
+function truncate(str,max){return str.length>max?str.slice(0,max-1)+'…':str;}
 
 function readFileMeta(file){
   return new Promise(resolve=>{
@@ -3131,6 +3094,8 @@ audio.addEventListener('play',()=>{
   document.body.classList.add('is-playing');
   setVinylSpin(true);
   startVisualizer();
+  // Start particles only if NP overlay is currently open
+  if(document.getElementById('now-playing-overlay').classList.contains('open')) startParticles();
 });
 audio.addEventListener('pause',()=>{
   const playIcon=`<polygon points="5 3 19 12 5 21 5 3"/>`;
@@ -3140,6 +3105,7 @@ audio.addEventListener('pause',()=>{
   document.body.classList.remove('is-playing');
   setVinylSpin(false);
   stopVisualizer();
+  stopParticles();
 });
 audio.addEventListener('ended',()=>playNext());
 audio.volume=volume;
@@ -4297,171 +4263,6 @@ function renderAbout(c){
   </div>`;
 }
 
-
-let deferredInstallPrompt=null;
-
-function isStandaloneMode(){
-  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
-}
-function isIOS(){
-  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
-}
-function isMac(){
-  return /Mac/i.test(navigator.platform||navigator.userAgent);
-}
-function isSafariBrowser(){
-  const ua=navigator.userAgent;
-  return /Safari/i.test(ua) && !/Chrome|CriOS|Chromium|Edg|EdgiOS|OPR|OPiOS|Firefox|FxiOS|SamsungBrowser/i.test(ua);
-}
-function getInstallGuideData(){
-  if(isIOS()){
-    if(isSafariBrowser()){
-      return {
-        title:'Install Aura on iPhone or iPad',
-        subtitle:'Safari on iOS installs PWAs from the Share menu instead of showing an in-app install prompt.',
-        steps:[
-          'Tap the Share button in Safari.',
-          'Scroll down and tap Add to Home Screen.',
-          'Tap Add to install Aura on your Home Screen.'
-        ],
-        note:'Once added, Aura opens like an app and keeps its own icon on your Home Screen.'
-      };
-    }
-    return {
-      title:'Open Aura in Safari',
-      subtitle:'On iPhone and iPad, installation is handled by Safari.',
-      steps:[
-        'Tap the browser menu and choose Open in Safari.',
-        'In Safari, tap the Share button.',
-        'Choose Add to Home Screen, then tap Add.'
-      ],
-      note:'Chrome, Edge, and other iOS browsers do not show the install prompt for PWAs.'
-    };
-  }
-  if(isMac() && isSafariBrowser()){
-    return {
-      title:'Add Aura to the Dock',
-      subtitle:'Safari on Mac installs web apps with Add to Dock.',
-      steps:[
-        'In Safari, open the Share menu or the File menu.',
-        'Choose Add to Dock.',
-        'Confirm the name and click Add.'
-      ],
-      note:'This creates a dock app for Aura and opens it in its own app-style window.'
-    };
-  }
-  return {
-    title:'Install Aura',
-    subtitle:'Aura can be installed from supported desktop and Android browsers.',
-    steps:[
-      'Tap the Install Aura button if the browser prompt appears.',
-      'If no prompt appears, use the browser install icon in the address bar or the browser menu.',
-      'Confirm the install to launch Aura like an app.'
-    ],
-    note:'Chrome and Edge support the install prompt. Other browsers may use their own install flow.'
-  };
-}
-function showInstallGuide(){
-  const data=getInstallGuideData();
-  const overlay=document.createElement('div');
-  overlay.className='install-guide-overlay';
-  overlay.innerHTML=`
-    <div class="install-guide" role="dialog" aria-modal="true" aria-label="Install Aura">
-      <div class="install-guide-title">${data.title}</div>
-      <div class="install-guide-subtitle">${data.subtitle}</div>
-      <div class="install-steps">
-        ${data.steps.map((step,i)=>`
-          <div class="install-step">
-            <div class="install-step-num">${i+1}</div>
-            <div class="install-step-text">${step}</div>
-          </div>
-        `).join('')}
-      </div>
-      <div class="install-guide-note">${data.note}</div>
-      <div class="install-guide-actions">
-        <button class="modal-btn cancel" id="install-guide-close">Close</button>
-      </div>
-    </div>`;
-  const close=()=>overlay.remove();
-  overlay.addEventListener('click',e=>{if(e.target===overlay)close();});
-  overlay.querySelector('#install-guide-close').addEventListener('click',close);
-  document.body.appendChild(overlay);
-}
-function updateInstallUI(){
-  const btn=document.getElementById('install-btn');
-  const label=document.getElementById('install-btn-label');
-  const helper=document.getElementById('install-helper');
-  if(!btn||!label||!helper)return;
-
-  if(isStandaloneMode()){
-    btn.hidden=true;
-    helper.hidden=true;
-    return;
-  }
-
-  btn.hidden=false;
-  helper.hidden=false;
-
-  if(deferredInstallPrompt){
-    label.textContent='Install Aura';
-    helper.textContent='Install for a fullscreen app experience and quicker access from your device.';
-    return;
-  }
-
-  if(isIOS()){
-    if(isSafariBrowser()){
-      label.textContent='Install on Home Screen';
-      helper.textContent='Safari on iPhone and iPad installs Aura from Share → Add to Home Screen.';
-    }else{
-      label.textContent='How to Install on iPhone';
-      helper.textContent='Open this page in Safari, then use Share → Add to Home Screen.';
-    }
-    return;
-  }
-
-  if(isMac() && isSafariBrowser()){
-    label.textContent='Add Aura to Dock';
-    helper.textContent='Safari on Mac uses Share or File → Add to Dock instead of a web install prompt.';
-    return;
-  }
-
-  label.textContent='Install Aura';
-  helper.textContent='If the browser does not show a prompt here, use the address-bar install icon or browser menu.';
-}
-async function handleInstallAction(){
-  if(isStandaloneMode()) return;
-  if(deferredInstallPrompt){
-    const promptEvent=deferredInstallPrompt;
-    deferredInstallPrompt=null;
-    updateInstallUI();
-    try{
-      await promptEvent.prompt();
-      if(promptEvent.userChoice) await promptEvent.userChoice;
-    }catch(e){
-      console.warn('Install prompt failed',e);
-    }finally{
-      setTimeout(updateInstallUI,300);
-    }
-    return;
-  }
-  showInstallGuide();
-}
-
-window.addEventListener('beforeinstallprompt',e=>{
-  e.preventDefault();
-  deferredInstallPrompt=e;
-  updateInstallUI();
-});
-window.addEventListener('appinstalled',()=>{
-  deferredInstallPrompt=null;
-  updateInstallUI();
-});
-window.addEventListener('DOMContentLoaded',()=>{
-  updateInstallUI();
-});
-window.addEventListener('focus',updateInstallUI);
-window.matchMedia('(display-mode: standalone)').addEventListener?.('change',updateInstallUI);
-
 // ==================== INIT ====================
 async function init(){
   await initDB();
@@ -4852,7 +4653,8 @@ document.addEventListener('pointerdown',e=>{
 const _origOpen=openNowPlaying;
 openNowPlaying=function(){
   _origOpen();
-  startParticles();
+  // Only start particles if music is actually playing
+  if(!audio.paused) startParticles();
   startVisRing();
 };
 const _origClose=closeNowPlaying;
