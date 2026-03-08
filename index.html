@@ -412,8 +412,8 @@ body::after{
 .track-list{display:flex;flex-direction:column;gap:1px}
 .track-row{
   display:grid;
-  grid-template-columns:36px 50px 1fr auto auto auto;
-  align-items:center;gap:14px;
+  grid-template-columns:52px 1fr auto auto auto;
+  align-items:center;gap:12px;
   padding:9px 14px;
   border-radius:12px;
   cursor:pointer;
@@ -454,17 +454,17 @@ body::after{
   50%{box-shadow:0 0 20px var(--accent),0 0 40px rgba(0,212,232,0.3)}
 }
 
-.track-num{
-  font-size:12px;color:var(--text-muted);
-  text-align:center;font-family:'Exo 2',sans-serif;font-weight:600;
-  transition:opacity var(--transition);
-}
+.track-num{display:none}
 .track-row.playing .track-num{display:none}
-.track-row.playing .playing-anim{display:flex}
-.playing-anim{
-  display:none;align-items:flex-end;
-  justify-content:center;gap:2px;height:22px;
+.track-art .playing-anim{
+  display:none;align-items:flex-end;justify-content:center;gap:2px;
+  position:absolute;inset:0;
+  background:rgba(0,0,0,0.55);
+  border-radius:10px;
+  z-index:2;
+  pointer-events:none;
 }
+.track-row.playing .track-art .playing-anim{display:flex}
 .playing-anim span{
   display:block;width:3px;
   background:linear-gradient(180deg,var(--accent2),var(--accent));
@@ -486,7 +486,7 @@ body.is-playing .playing-anim span{
   100%{transform:scaleY(1);opacity:1}
 }
 .track-art{
-  width:50px;height:50px;
+  width:52px;height:52px;
   border-radius:10px;
   background:var(--surfaceSolid2);
   overflow:hidden;position:relative;flex-shrink:0;
@@ -1591,7 +1591,82 @@ body.is-playing .vis-bars:hover{opacity:1}
   letter-spacing:-.5px;
 }
 .pl-detail-sub{font-size:13px;color:var(--text-muted);margin-bottom:18px;font-weight:500}
-.pl-detail-actions{display:flex;gap:10px}
+.pl-detail-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+/* ─── ADD SONGS PICKER ───────────────────── */
+#add-songs-picker{
+  margin-top:28px;
+  background:rgba(8,14,28,0.95);
+  border:1px solid rgba(0,212,232,0.15);
+  border-radius:18px;
+  overflow:hidden;
+  animation:slideUpIn .22s cubic-bezier(0.4,0,0.2,1);
+}
+.add-songs-header{
+  display:flex;align-items:center;padding:16px 18px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.add-songs-title{
+  flex:1;font-family:'Exo 2',sans-serif;font-size:16px;font-weight:800;
+  letter-spacing:-.2px;
+}
+.add-songs-close{
+  background:rgba(255,255,255,0.07);border:none;cursor:pointer;
+  color:var(--text-muted);padding:6px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all var(--transition);
+}
+.add-songs-close:hover{color:var(--text);background:rgba(255,255,255,0.12)}
+.add-songs-close svg{width:16px;height:16px;display:block}
+.add-songs-search-wrap{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 16px;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+}
+.add-songs-search-icon{width:16px;height:16px;color:var(--text-muted);flex-shrink:0}
+#add-songs-search{
+  flex:1;background:none;border:none;outline:none;
+  font-size:14px;color:var(--text);font-family:'Outfit',sans-serif;
+}
+#add-songs-search::placeholder{color:var(--text-muted)}
+#add-songs-list{max-height:320px;overflow-y:auto}
+.add-songs-item{
+  display:flex;align-items:center;gap:12px;
+  padding:9px 16px;cursor:pointer;
+  transition:background .15s;
+}
+.add-songs-item:hover{background:rgba(0,212,232,0.05)}
+.add-songs-item.selected{background:rgba(0,212,232,0.1)}
+.add-songs-art{
+  width:44px;height:44px;border-radius:8px;
+  background:var(--surfaceSolid2);overflow:hidden;flex-shrink:0;
+}
+.add-songs-art img{width:100%;height:100%;object-fit:cover}
+.add-songs-art-ph{
+  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  color:var(--text-muted);
+}
+.add-songs-art-ph svg{width:18px;height:18px}
+.add-songs-info{flex:1;min-width:0}
+.add-songs-track{
+  font-size:13px;font-weight:500;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.add-songs-item.selected .add-songs-track{color:var(--accent2)}
+.add-songs-meta{font-size:11px;color:var(--text-muted);margin-top:2px}
+.add-songs-check{
+  width:22px;height:22px;border-radius:50%;flex-shrink:0;
+  border:2px solid rgba(255,255,255,0.15);
+  display:flex;align-items:center;justify-content:center;
+  transition:all .15s;color:var(--accent2);
+}
+.add-songs-item.selected .add-songs-check{
+  background:rgba(0,212,232,0.2);border-color:var(--accent2);
+}
+.add-songs-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;border-top:1px solid rgba(255,255,255,0.06);
+}
 
 /* ─── TOGGLE ────────────────────────────── */
 .toggle{
@@ -1648,10 +1723,8 @@ body.is-playing .vis-bars:hover{opacity:1}
 }
 @media(max-width:400px){
   .grid-4{grid-template-columns:repeat(2,1fr)}
-  .track-row{grid-template-columns:0 42px 1fr auto;gap:8px}
-  .track-num,.playing-anim{display:none!important}
-  .track-more{display:none}
-  .track-row{padding:7px 8px}
+  .track-row{grid-template-columns:44px 1fr auto;gap:8px;padding:7px 8px}
+  .track-more,.track-dur{display:none}
 }
 @media(min-width:769px){
   #main{padding-bottom:var(--player-h)}
@@ -2132,7 +2205,13 @@ body.is-playing .vis-bars:hover{opacity:1}
 }
 /* Hide the playing-anim number col in queue view (no track number) */
 #queue-view-list .track-row .track-num{display:none}
-#queue-view-list .track-row .playing-anim{display:none}
+/* Queue view drag handle replaces number column */
+#queue-view-list .track-row{
+  grid-template-columns:28px 52px 1fr auto auto auto;
+}
+#queue-view-list .track-row .q-drag-handle{
+  width:28px;display:flex;align-items:center;justify-content:center;
+}
 </style>
 </head>
 <body>
@@ -2497,7 +2576,7 @@ body.is-playing .vis-bars:hover{opacity:1}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
     Songs
   </div>
-  <div class="bnav-item" id="bnav-queue" onclick="toggleQueue();setBottomNav('queue')">
+  <div class="bnav-item" id="bnav-queue" onclick="navigate('queue');setBottomNav('queue')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
     Queue
   </div>
@@ -3396,11 +3475,108 @@ function renderPlaylistDetail(c,id){
         <div class="pl-detail-actions">
           <button class="btn-sm primary" onclick="playPlaylist(${id})"><svg viewBox="0 0 24 24" fill="currentColor" style="width:13px;height:13px"><polygon points="5 3 19 12 5 21 5 3"/></svg>Play All</button>
           <button class="btn-sm ghost" onclick="shufflePlaylist(${id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>Shuffle</button>
+          <button class="btn-sm ghost" onclick="openAddSongsPicker(${id})" style="color:var(--accent2);border-color:rgba(0,212,232,0.3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Songs</button>
         </div>
       </div>
     </div>
-    ${plTracks.length?`<div class="track-list">${plTracks.map((t,i)=>trackRowHTML(t,i+1,plTracks,'playlist:'+id)).join('')}</div>`:
-    `<div style="padding:40px;text-align:center;color:var(--text-muted)">This playlist is empty.<br>Right-click songs to add them here.</div>`}`;
+    ${plTracks.length?`<div class="track-list" id="pl-track-list">${plTracks.map((t,i)=>trackRowHTML(t,i+1,plTracks,'playlist:'+id)).join('')}</div>`:
+    `<div id="pl-track-list" style="padding:40px;text-align:center;color:var(--text-muted)">This playlist is empty.<br><button class="btn-sm ghost" style="margin-top:12px" onclick="openAddSongsPicker(${id})">+ Add Songs</button></div>`}
+
+    <!-- Add Songs Picker -->
+    <div id="add-songs-picker" style="display:none">
+      <div class="add-songs-header">
+        <span class="add-songs-title">Add Songs</span>
+        <button onclick="closeAddSongsPicker()" class="add-songs-close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="add-songs-search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="add-songs-search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="add-songs-search" type="text" placeholder="Search songs…" oninput="filterAddSongs(this.value,${id})" autocomplete="off">
+      </div>
+      <div id="add-songs-list"></div>
+      <div class="add-songs-footer">
+        <span id="add-songs-count" style="font-size:12px;color:var(--text-muted)">0 selected</span>
+        <button class="btn-sm primary" id="add-songs-confirm" onclick="confirmAddSongs(${id})">Add to Playlist</button>
+      </div>
+    </div>`;
+
+  // Init picker state
+  window._addSongsSelected = new Set();
+  window._addSongsPlaylistId = id;
+}
+
+let _addSongsSelected = new Set();
+let _addSongsPlaylistId = null;
+
+function openAddSongsPicker(plId){
+  _addSongsSelected = new Set();
+  _addSongsPlaylistId = plId;
+  const picker = document.getElementById('add-songs-picker');
+  if(!picker) return;
+  picker.style.display = '';
+  document.getElementById('add-songs-search').value = '';
+  filterAddSongs('', plId);
+  // Scroll picker into view
+  picker.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function closeAddSongsPicker(){
+  const picker = document.getElementById('add-songs-picker');
+  if(picker) picker.style.display = 'none';
+}
+
+function filterAddSongs(q, plId){
+  const pl = playlists.find(p=>p.id===plId);
+  if(!pl) return;
+  const inPl = new Set(pl.trackIds);
+  const lower = q.toLowerCase();
+  const candidates = tracks.filter(t=>
+    !inPl.has(t.id) &&
+    (!lower || t.title.toLowerCase().includes(lower) || t.artist.toLowerCase().includes(lower) || (t.album||'').toLowerCase().includes(lower))
+  );
+  const list = document.getElementById('add-songs-list');
+  if(!list) return;
+  if(!candidates.length){
+    list.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px">${q?'No matches':'All songs already in playlist'}</div>`;
+    return;
+  }
+  list.innerHTML = candidates.map(t=>{
+    const sel = _addSongsSelected.has(t.id);
+    return `<div class="add-songs-item ${sel?'selected':''}" data-id="${t.id}" onclick="toggleAddSong(${t.id},${plId})">
+      <div class="add-songs-art">${t.artData?`<img src="${t.artData}" alt="">`:`<div class="add-songs-art-ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>`}</div>
+      <div class="add-songs-info">
+        <div class="add-songs-track">${escHTML(t.title)}</div>
+        <div class="add-songs-meta">${escHTML(t.artist)}</div>
+      </div>
+      <div class="add-songs-check">${sel?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px"><polyline points="20 6 9 17 4 12"/></svg>`:''}</div>
+    </div>`;
+  }).join('');
+  updateAddSongsCount();
+}
+
+function toggleAddSong(trackId, plId){
+  if(_addSongsSelected.has(trackId)) _addSongsSelected.delete(trackId);
+  else _addSongsSelected.add(trackId);
+  filterAddSongs(document.getElementById('add-songs-search')?.value||'', plId);
+}
+
+function updateAddSongsCount(){
+  const el = document.getElementById('add-songs-count');
+  if(el) el.textContent = `${_addSongsSelected.size} selected`;
+  const btn = document.getElementById('add-songs-confirm');
+  if(btn) btn.disabled = _addSongsSelected.size === 0;
+}
+
+async function confirmAddSongs(plId){
+  if(!_addSongsSelected.size) return;
+  const pl = playlists.find(p=>p.id===plId);
+  if(!pl) return;
+  pl.trackIds = [...pl.trackIds, ..._addSongsSelected];
+  await dbPut('playlists', pl);
+  toast(`Added ${_addSongsSelected.size} song${_addSongsSelected.size>1?'s':''}`);
+  _addSongsSelected = new Set();
+  renderCurrentView(); // re-render to show updated playlist
 }
 
 function renderFavorites(c,filtered){
@@ -3466,7 +3642,9 @@ function renderQueueView(c){
       <div class="q-drag-handle track-queue-handle" onclick="event.stopPropagation()" title="Drag to reorder">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/></svg>
       </div>
-      <div class="track-art">${t.artData?`<img src="${t.artData}" alt="" loading="lazy">`:`<div class="track-art-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>`}</div>
+      <div class="track-art">${t.artData?`<img src="${t.artData}" alt="" loading="lazy">`:`<div class="track-art-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>`}
+        <div class="playing-anim"><span></span><span></span><span></span><span></span></div>
+      </div>
       <div class="track-info"><div class="track-title">${escHTML(t.title)}</div><div class="track-meta">${escHTML(t.artist)}${t.album&&t.album!=='Unknown Album'?' · '+escHTML(t.album):''}</div></div>
       <button class="track-fav ${isFav?'active':''}" onclick="event.stopPropagation();toggleFavorite(${t.id})" title="${isFav?'Remove favorite':'Add favorite'}">
         <svg viewBox="0 0 24 24" fill="${isFav?'#ff4e6a':'none'}" stroke="${isFav?'#ff4e6a':'currentColor'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -3572,9 +3750,9 @@ function trackRowHTML(track,num,list,context=''){
     ontouchstart="startTrackLongPress(${track.id},event)"
     ontouchend="cancelTrackLongPress(event)"
     ontouchmove="cancelTrackLongPress(event)">
-    <div class="track-num">${num}</div>
-    <div class="playing-anim"><span></span><span></span><span></span><span></span></div>
-    <div class="track-art">${track.artData?`<img src="${track.artData}" alt="" loading="lazy">`:`<div class="track-art-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>`}</div>
+    <div class="track-art">${track.artData?`<img src="${track.artData}" alt="" loading="lazy">`:`<div class="track-art-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>`}
+      <div class="playing-anim"><span></span><span></span><span></span><span></span></div>
+    </div>
     <div class="track-info"><div class="track-title">${escHTML(track.title)}</div><div class="track-meta">${escHTML(track.artist)}${track.album&&track.album!=='Unknown Album'?' · '+escHTML(track.album):''}</div></div>
     <button class="track-fav ${isFav?'active':''}" onclick="event.stopPropagation();toggleFavorite(${track.id})" title="${isFav?'Remove favorite':'Add favorite'}">
       <svg viewBox="0 0 24 24" fill="${isFav?'#ff4e6a':'none'}" stroke="${isFav?'#ff4e6a':'currentColor'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
