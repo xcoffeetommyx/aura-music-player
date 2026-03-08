@@ -4295,46 +4295,76 @@ async function saveLyrics(){
 
 // ==================== ART LONG-PRESS ====================
 let artLongPressTimer=null;
-// ── ART LONG-PRESS (wired in JS so we can use passive:false + block contextmenu) ──
+// ── ART LONG-PRESS ─────────────────────────────────────────────────────────
+// Wired via JS (not inline attrs) so touchstart can be non-passive (→ preventDefault)
+// which suppresses Chrome/Safari's native image long-press context menu.
 (function initArtLongPress(){
-  const art=document.getElementById('np-art-circle');
-  if(!art)return;
+  // Delay slightly so DOM is definitely ready
+  const wire=()=>{
+    const art=document.getElementById('np-art-circle');
+    if(!art){setTimeout(wire,200);return;}
 
-  // Block browser's native image context menu entirely on this element
-  art.addEventListener('contextmenu',e=>e.preventDefault(),false);
+    let startX=0,startY=0;
+    const MOVE_THRESHOLD=12; // px — cancel only if finger drifts more than this
 
-  art.addEventListener('mousedown',e=>{startArtLongPress(e)});
-  art.addEventListener('mouseup',()=>cancelArtLongPress());
-  art.addEventListener('mouseleave',()=>cancelArtLongPress());
+    // Kill browser context menu on long-press entirely
+    art.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();},false);
 
-  // Non-passive so we can call preventDefault() to suppress the native long-press popup
-  art.addEventListener('touchstart',e=>{
-    e.preventDefault(); // ← kills browser image context menu
-    startArtLongPress(e);
-  },{passive:false});
-  art.addEventListener('touchend',()=>cancelArtLongPress(),{passive:true});
-  art.addEventListener('touchmove',()=>cancelArtLongPress(),{passive:true});
+    // TOUCH ─────────────────────────────────────────────────────────────────
+    art.addEventListener('touchstart',e=>{
+      e.preventDefault(); // stops native image popup; must be non-passive
+      startX=e.touches[0].clientX;
+      startY=e.touches[0].clientY;
+      _artStartLongPress();
+    },{passive:false,capture:false});
+
+    art.addEventListener('touchmove',e=>{
+      const dx=e.touches[0].clientX-startX;
+      const dy=e.touches[0].clientY-startY;
+      if(Math.hypot(dx,dy)>MOVE_THRESHOLD) _artCancelLongPress();
+    },{passive:true});
+
+    art.addEventListener('touchend',e=>{
+      _artCancelLongPress();
+    },{passive:true});
+
+    art.addEventListener('touchcancel',()=>{
+      _artCancelLongPress();
+    },{passive:true});
+
+    // MOUSE (desktop) ────────────────────────────────────────────────────────
+    art.addEventListener('mousedown',()=>{startX=0;startY=0;_artStartLongPress();});
+    art.addEventListener('mouseup',()=>_artCancelLongPress());
+    art.addEventListener('mouseleave',()=>_artCancelLongPress());
+  };
+  wire();
 })();
 
-function startArtLongPress(e){
+function _artStartLongPress(){
+  _artCancelLongPress(); // clear any previous
   const hint=document.getElementById('np-art-edit-hint');
   const art=document.getElementById('np-art-circle');
-  hint.classList.add('show');
-  art.dataset.pressing='1';
+  if(hint) hint.classList.add('show');
+  if(art) art.dataset.pressing='1';
   artLongPressTimer=setTimeout(()=>{
-    hint.classList.remove('show');
-    delete art.dataset.pressing;
+    artLongPressTimer=null;
+    const hint2=document.getElementById('np-art-edit-hint');
+    const art2=document.getElementById('np-art-circle');
+    if(hint2) hint2.classList.remove('show');
+    if(art2) delete art2.dataset.pressing;
     showChangeArtPopup();
   },600);
 }
-function cancelArtLongPress(){
-  clearTimeout(artLongPressTimer);
-  artLongPressTimer=null;
+function _artCancelLongPress(){
+  if(artLongPressTimer){clearTimeout(artLongPressTimer);artLongPressTimer=null;}
   const hint=document.getElementById('np-art-edit-hint');
   const art=document.getElementById('np-art-circle');
-  if(hint)hint.classList.remove('show');
-  if(art)delete art.dataset.pressing;
+  if(hint) hint.classList.remove('show');
+  if(art) delete art.dataset.pressing;
 }
+// Keep old names as aliases in case referenced elsewhere
+function startArtLongPress(e){_artStartLongPress();}
+function cancelArtLongPress(){_artCancelLongPress();}
 function showChangeArtPopup(){
   const overlay=document.createElement('div');
   overlay.className='edit-field-overlay';
@@ -4775,7 +4805,7 @@ function stopParticles(){
 // ── SWIPE GESTURES on NP overlay ─────────
 let _isDraggingQueueItem=false; // set true during touch-drag of queue items
 (function initSwipe(){
-  let t0x=0,t0y=0,t0ScrollEl=null,t0ScrollTop=0,t0InLyrics=false;
+  let t0x=0,t0y=0,t0ScrollEl=null,t0ScrollTop=0,t0InLyrics=false,t0OnArt=false;
   const ov=()=>document.getElementById('now-playing-overlay');
   document.addEventListener('touchstart',e=>{
     if(!ov().classList.contains('open'))return;
@@ -4783,12 +4813,13 @@ let _isDraggingQueueItem=false; // set true during touch-drag of queue items
     const scrollable=e.target.closest('.lyrics-content,.lyrics-wrap,.q-list-wrap');
     t0ScrollEl=scrollable||null;
     t0ScrollTop=scrollable?scrollable.scrollTop:0;
-    // Check if touch starts anywhere inside the lyrics panel (not just scrollable)
     t0InLyrics=!!e.target.closest('#np-panel-lyrics');
+    t0OnArt=!!e.target.closest('#np-art-circle'); // art handles its own touch
   },{passive:true});
   document.addEventListener('touchend',e=>{
     if(!ov().classList.contains('open'))return;
     if(_isDraggingQueueItem)return;
+    if(t0OnArt)return; // art element handles its own interactions
     const dx=e.changedTouches[0].clientX-t0x;
     const dy=e.changedTouches[0].clientY-t0y;
     if(Math.abs(dx)<40&&Math.abs(dy)<40)return;
@@ -4798,7 +4829,6 @@ let _isDraggingQueueItem=false; // set true during touch-drag of queue items
       else if(dx>60){playPrev();toast('⏮ Prev')}
     } else {
       if(dy>80){
-        // Never swipe-close from inside the lyrics panel
         if(t0InLyrics) return;
         if(t0ScrollEl&&t0ScrollTop>0)return;
         const queueOpen=document.getElementById('np-panel-queue').classList.contains('open');
