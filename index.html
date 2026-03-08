@@ -327,6 +327,105 @@ body::after{
 .add-btn:active{transform:translateY(0) scale(0.98)}
 .add-btn svg{width:15px;height:15px}
 
+.install-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:10px;margin-top:10px;
+  background:rgba(16,25,46,0.6);
+  border:1px solid rgba(0,212,232,0.15);
+  border-radius:var(--radius);
+  color:var(--text);
+  font-size:13px;font-weight:600;
+  cursor:pointer;transition:all var(--transition);
+  font-family:'Outfit',sans-serif;
+  backdrop-filter:blur(10px);
+  -webkit-tap-highlight-color:transparent;
+}
+.install-btn:hover{
+  background:rgba(0,212,232,0.08);
+  border-color:rgba(0,212,232,0.35);
+  box-shadow:0 0 18px rgba(0,212,232,0.12);
+  transform:translateY(-1px);
+}
+.install-btn:active{transform:translateY(0) scale(0.98)}
+.install-btn svg{width:15px;height:15px;flex-shrink:0}
+.install-helper{
+  margin-top:8px;
+  color:var(--text-muted);
+  font-size:11px;
+  line-height:1.45;
+  text-align:center;
+  padding:0 4px;
+}
+.install-guide-overlay{
+  position:fixed;inset:0;z-index:250;
+  background:rgba(0,0,0,.65);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+}
+.install-guide{
+  width:min(460px,100%);
+  background:linear-gradient(180deg,rgba(11,18,32,0.98),rgba(8,13,26,0.98));
+  border:1px solid rgba(0,212,232,0.18);
+  border-radius:22px;
+  box-shadow:0 24px 70px rgba(0,0,0,.55);
+  padding:22px;
+}
+.install-guide-title{
+  font-family:'Exo 2',sans-serif;
+  font-size:22px;font-weight:800;
+  margin-bottom:8px;
+}
+.install-guide-subtitle{
+  color:var(--text-dim);
+  font-size:13px;
+  line-height:1.5;
+  margin-bottom:18px;
+}
+.install-steps{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-bottom:18px;
+}
+.install-step{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  padding:12px 14px;
+  border-radius:16px;
+  background:rgba(16,25,46,0.55);
+  border:1px solid rgba(0,212,232,0.10);
+}
+.install-step-num{
+  width:24px;height:24px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(0,212,232,0.14);
+  color:var(--accent2);
+  font-size:12px;font-weight:700;
+  flex-shrink:0;
+}
+.install-step-text{
+  color:var(--text);
+  font-size:13px;
+  line-height:1.5;
+}
+.install-guide-note{
+  color:var(--text-muted);
+  font-size:12px;
+  line-height:1.45;
+  margin-bottom:18px;
+}
+.install-guide-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+.install-guide-actions .modal-btn{
+  min-width:110px;
+}
+
 /* ─── TOPBAR ────────────────────────────── */
 #topbar{
   display:flex;align-items:center;gap:12px;
@@ -2176,6 +2275,11 @@ body.is-playing .vis-bars:hover{opacity:1}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Add Music
     </button>
+    <button class="install-btn" id="install-btn" onclick="handleInstallAction()" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><rect x="4" y="18" width="16" height="3" rx="1.5"/></svg>
+      <span id="install-btn-label">Install Aura</span>
+    </button>
+    <div class="install-helper" id="install-helper" hidden></div>
   </div>
 </div>
 
@@ -4192,6 +4296,171 @@ function renderAbout(c){
     </div>
   </div>`;
 }
+
+
+let deferredInstallPrompt=null;
+
+function isStandaloneMode(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
+}
+function isIOS(){
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+function isMac(){
+  return /Mac/i.test(navigator.platform||navigator.userAgent);
+}
+function isSafariBrowser(){
+  const ua=navigator.userAgent;
+  return /Safari/i.test(ua) && !/Chrome|CriOS|Chromium|Edg|EdgiOS|OPR|OPiOS|Firefox|FxiOS|SamsungBrowser/i.test(ua);
+}
+function getInstallGuideData(){
+  if(isIOS()){
+    if(isSafariBrowser()){
+      return {
+        title:'Install Aura on iPhone or iPad',
+        subtitle:'Safari on iOS installs PWAs from the Share menu instead of showing an in-app install prompt.',
+        steps:[
+          'Tap the Share button in Safari.',
+          'Scroll down and tap Add to Home Screen.',
+          'Tap Add to install Aura on your Home Screen.'
+        ],
+        note:'Once added, Aura opens like an app and keeps its own icon on your Home Screen.'
+      };
+    }
+    return {
+      title:'Open Aura in Safari',
+      subtitle:'On iPhone and iPad, installation is handled by Safari.',
+      steps:[
+        'Tap the browser menu and choose Open in Safari.',
+        'In Safari, tap the Share button.',
+        'Choose Add to Home Screen, then tap Add.'
+      ],
+      note:'Chrome, Edge, and other iOS browsers do not show the install prompt for PWAs.'
+    };
+  }
+  if(isMac() && isSafariBrowser()){
+    return {
+      title:'Add Aura to the Dock',
+      subtitle:'Safari on Mac installs web apps with Add to Dock.',
+      steps:[
+        'In Safari, open the Share menu or the File menu.',
+        'Choose Add to Dock.',
+        'Confirm the name and click Add.'
+      ],
+      note:'This creates a dock app for Aura and opens it in its own app-style window.'
+    };
+  }
+  return {
+    title:'Install Aura',
+    subtitle:'Aura can be installed from supported desktop and Android browsers.',
+    steps:[
+      'Tap the Install Aura button if the browser prompt appears.',
+      'If no prompt appears, use the browser install icon in the address bar or the browser menu.',
+      'Confirm the install to launch Aura like an app.'
+    ],
+    note:'Chrome and Edge support the install prompt. Other browsers may use their own install flow.'
+  };
+}
+function showInstallGuide(){
+  const data=getInstallGuideData();
+  const overlay=document.createElement('div');
+  overlay.className='install-guide-overlay';
+  overlay.innerHTML=`
+    <div class="install-guide" role="dialog" aria-modal="true" aria-label="Install Aura">
+      <div class="install-guide-title">${data.title}</div>
+      <div class="install-guide-subtitle">${data.subtitle}</div>
+      <div class="install-steps">
+        ${data.steps.map((step,i)=>`
+          <div class="install-step">
+            <div class="install-step-num">${i+1}</div>
+            <div class="install-step-text">${step}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="install-guide-note">${data.note}</div>
+      <div class="install-guide-actions">
+        <button class="modal-btn cancel" id="install-guide-close">Close</button>
+      </div>
+    </div>`;
+  const close=()=>overlay.remove();
+  overlay.addEventListener('click',e=>{if(e.target===overlay)close();});
+  overlay.querySelector('#install-guide-close').addEventListener('click',close);
+  document.body.appendChild(overlay);
+}
+function updateInstallUI(){
+  const btn=document.getElementById('install-btn');
+  const label=document.getElementById('install-btn-label');
+  const helper=document.getElementById('install-helper');
+  if(!btn||!label||!helper)return;
+
+  if(isStandaloneMode()){
+    btn.hidden=true;
+    helper.hidden=true;
+    return;
+  }
+
+  btn.hidden=false;
+  helper.hidden=false;
+
+  if(deferredInstallPrompt){
+    label.textContent='Install Aura';
+    helper.textContent='Install for a fullscreen app experience and quicker access from your device.';
+    return;
+  }
+
+  if(isIOS()){
+    if(isSafariBrowser()){
+      label.textContent='Install on Home Screen';
+      helper.textContent='Safari on iPhone and iPad installs Aura from Share → Add to Home Screen.';
+    }else{
+      label.textContent='How to Install on iPhone';
+      helper.textContent='Open this page in Safari, then use Share → Add to Home Screen.';
+    }
+    return;
+  }
+
+  if(isMac() && isSafariBrowser()){
+    label.textContent='Add Aura to Dock';
+    helper.textContent='Safari on Mac uses Share or File → Add to Dock instead of a web install prompt.';
+    return;
+  }
+
+  label.textContent='Install Aura';
+  helper.textContent='If the browser does not show a prompt here, use the address-bar install icon or browser menu.';
+}
+async function handleInstallAction(){
+  if(isStandaloneMode()) return;
+  if(deferredInstallPrompt){
+    const promptEvent=deferredInstallPrompt;
+    deferredInstallPrompt=null;
+    updateInstallUI();
+    try{
+      await promptEvent.prompt();
+      if(promptEvent.userChoice) await promptEvent.userChoice;
+    }catch(e){
+      console.warn('Install prompt failed',e);
+    }finally{
+      setTimeout(updateInstallUI,300);
+    }
+    return;
+  }
+  showInstallGuide();
+}
+
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();
+  deferredInstallPrompt=e;
+  updateInstallUI();
+});
+window.addEventListener('appinstalled',()=>{
+  deferredInstallPrompt=null;
+  updateInstallUI();
+});
+window.addEventListener('DOMContentLoaded',()=>{
+  updateInstallUI();
+});
+window.addEventListener('focus',updateInstallUI);
+window.matchMedia('(display-mode: standalone)').addEventListener?.('change',updateInstallUI);
 
 // ==================== INIT ====================
 async function init(){
