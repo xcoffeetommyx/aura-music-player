@@ -995,6 +995,13 @@ body.is-playing .vis-bars:hover{opacity:1}
   animation:slideUp .4s cubic-bezier(0.4,0,0.2,1) both;
 }
 #now-playing-overlay.open{display:flex}
+#now-playing-overlay.closing{
+  animation:slideDown .38s cubic-bezier(0.4,0,0.2,1) both;
+}
+@keyframes slideDown{
+  from{transform:translateY(0);opacity:1}
+  to{transform:translateY(100%);opacity:0}
+}
 /* Queue sheet - slides up inside NP overlay */
 #np-panel-queue{
   position:absolute;inset:0;z-index:10;
@@ -2445,8 +2452,8 @@ body.is-playing .vis-bars:hover{opacity:1}
           <img id="np-art-img" style="display:none;width:100%;height:100%;object-fit:cover" alt="">
           <!-- Long-press hint -->
           <div class="np-art-edit-hint" id="np-art-edit-hint">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Hold to edit
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Change Art
           </div>
         </div>
       </div>
@@ -4101,13 +4108,18 @@ function renderQueue(){
 function openNowPlaying(){npOpen=true;document.getElementById('now-playing-overlay').classList.add('open')}
 function closeNowPlaying(){
   npOpen=false;
-  document.getElementById('now-playing-overlay').classList.remove('open');
-  // Also close queue sheet
-  const qs=document.getElementById('np-panel-queue');
-  if(qs)qs.classList.remove('open');
-  const btn=document.getElementById('np-queue-shortcut-btn');
-  if(btn){btn.style.color='rgba(255,255,255,0.45)';btn.style.filter='none';}
-  switchNpTab('player');
+  const ov=document.getElementById('now-playing-overlay');
+  ov.classList.add('closing');
+  setTimeout(()=>{
+    ov.classList.remove('open','closing');
+    // Also close queue sheet
+    const qs=document.getElementById('np-panel-queue');
+    if(qs)qs.classList.remove('open');
+    const btn=document.getElementById('np-queue-shortcut-btn');
+    if(btn){btn.style.color='rgba(255,255,255,0.45)';btn.style.filter='none';}
+    switchNpTab('player');
+    stopParticles();
+  },360);
 }
 
 // ==================== SIDEBAR MOBILE ====================
@@ -4285,7 +4297,7 @@ function startArtLongPress(e){
   artLongPressTimer=setTimeout(()=>{
     hint.classList.remove('show');
     delete art.dataset.pressing;
-    document.getElementById('art-input').click();
+    showChangeArtPopup();
   },600);
 }
 function cancelArtLongPress(){
@@ -4295,6 +4307,46 @@ function cancelArtLongPress(){
   const art=document.getElementById('np-art-circle');
   hint.classList.remove('show');
   delete art.dataset.pressing;
+}
+function showChangeArtPopup(){
+  // Build the same style overlay as editTrackField
+  const overlay=document.createElement('div');
+  overlay.className='edit-field-overlay';
+  overlay.innerHTML=`
+    <div class="edit-field-box" style="gap:0;padding:0;overflow:hidden;max-width:280px">
+      <div style="padding:18px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.07)">
+        <div class="edit-field-label" style="margin:0;font-size:13px;text-align:center;color:var(--text-dim)">Album Art</div>
+      </div>
+      <button id="art-popup-change" style="
+        width:100%;background:none;border:none;cursor:pointer;
+        padding:16px 20px;display:flex;align-items:center;gap:14px;
+        color:var(--text);font-size:14px;font-family:'Outfit',sans-serif;
+        transition:background .15s;text-align:left;
+      ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;flex-shrink:0;color:var(--accent2)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Change Album Art
+      </button>
+      <div style="height:1px;background:rgba(255,255,255,0.07)"></div>
+      <button id="art-popup-cancel" style="
+        width:100%;background:none;border:none;cursor:pointer;
+        padding:14px 20px;display:flex;align-items:center;justify-content:center;gap:10px;
+        color:var(--text-muted);font-size:13px;font-family:'Outfit',sans-serif;
+        transition:background .15s;
+      ">Cancel</button>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  document.getElementById('art-popup-change').onmouseenter=function(){this.style.background='rgba(255,255,255,0.06)'};
+  document.getElementById('art-popup-change').onmouseleave=function(){this.style.background='none'};
+  document.getElementById('art-popup-cancel').onmouseenter=function(){this.style.background='rgba(255,255,255,0.04)'};
+  document.getElementById('art-popup-cancel').onmouseleave=function(){this.style.background='none'};
+
+  document.getElementById('art-popup-change').onclick=()=>{
+    overlay.remove();
+    document.getElementById('art-input').click();
+  };
+  document.getElementById('art-popup-cancel').onclick=()=>overlay.remove();
+  overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};
 }
 async function handleArtChange(file){
   if(!file||!currentTrackId) return;
@@ -4696,31 +4748,32 @@ function stopParticles(){
 // ── SWIPE GESTURES on NP overlay ─────────
 let _isDraggingQueueItem=false; // set true during touch-drag of queue items
 (function initSwipe(){
-  let t0x=0,t0y=0,t0ScrollEl=null,t0ScrollTop=0;
+  let t0x=0,t0y=0,t0ScrollEl=null,t0ScrollTop=0,t0InLyrics=false;
+  const ov=()=>document.getElementById('now-playing-overlay');
   document.addEventListener('touchstart',e=>{
-    if(!document.getElementById('now-playing-overlay').classList.contains('open'))return;
+    if(!ov().classList.contains('open'))return;
     t0x=e.touches[0].clientX; t0y=e.touches[0].clientY;
-    // Record scroll state of any scrollable container
     const scrollable=e.target.closest('.lyrics-content,.lyrics-wrap,.q-list-wrap');
     t0ScrollEl=scrollable||null;
     t0ScrollTop=scrollable?scrollable.scrollTop:0;
+    // Check if touch starts anywhere inside the lyrics panel (not just scrollable)
+    t0InLyrics=!!e.target.closest('#np-panel-lyrics');
   },{passive:true});
   document.addEventListener('touchend',e=>{
-    if(!document.getElementById('now-playing-overlay').classList.contains('open'))return;
-    if(_isDraggingQueueItem)return; // never close during queue drag
+    if(!ov().classList.contains('open'))return;
+    if(_isDraggingQueueItem)return;
     const dx=e.changedTouches[0].clientX-t0x;
     const dy=e.changedTouches[0].clientY-t0y;
-    if(Math.abs(dx)<40&&Math.abs(dy)<40)return; // too small
+    if(Math.abs(dx)<40&&Math.abs(dy)<40)return;
     if(Math.abs(dx)>Math.abs(dy)){
-      // horizontal swipe — only when not in queue sheet
       if(document.getElementById('np-panel-queue').classList.contains('open'))return;
       if(dx<-60){playNext();toast('⏭ Next')}
       else if(dx>60){playPrev();toast('⏮ Prev')}
     } else {
-      // vertical swipe down = close (only if not scrolled into scrollable content)
       if(dy>80){
-        if(t0ScrollEl&&t0ScrollTop>0)return; // was scrolled — let it scroll, don't close
-        // Also check: if queue sheet is open, swipe down on it closes it not the overlay
+        // Never swipe-close from inside the lyrics panel
+        if(t0InLyrics) return;
+        if(t0ScrollEl&&t0ScrollTop>0)return;
         const queueOpen=document.getElementById('np-panel-queue').classList.contains('open');
         if(queueOpen){closeNpQueuePanel();return;}
         closeNowPlaying();
