@@ -2762,6 +2762,24 @@ function dbPut(store,obj){
     req.onerror=()=>rej(req.error);
   });
 }
+// Safe metadata-only update — fetches the full existing record first so fileData
+// and artData (large blobs) are never accidentally wiped by a partial put().
+function dbUpdateTrackMeta(id,changes){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction('tracks','readwrite');
+    const store=tx.objectStore('tracks');
+    const getReq=store.get(id);
+    getReq.onsuccess=()=>{
+      const existing=getReq.result;
+      if(!existing){rej(new Error('Track not found'));return;}
+      const updated=Object.assign({},existing,changes);
+      const putReq=store.put(updated);
+      putReq.onsuccess=()=>res();
+      putReq.onerror=()=>rej(putReq.error);
+    };
+    getReq.onerror=()=>rej(getReq.error);
+  });
+}
 function dbDelete(store,key){
   return new Promise((res,rej)=>{
     const tx=db.transaction(store,'readwrite');
@@ -2975,12 +2993,10 @@ async function playTrack(id,resetQueue=false){
   // Guard again after any await
   if(gen!==_playGen) return;
 
-  // Track play count — save metadata only; do NOT re-write the audio blob
+  // Track play count — update only changed fields so fileData/artData are never wiped
   track.playCount=(track.playCount||0)+1;
   track.lastPlayed=Date.now();
-  const meta=Object.assign({},track);
-  delete meta.fileData; // blob already in DB from import — skip expensive re-write
-  dbPut('tracks',meta).catch(()=>{});
+  dbUpdateTrackMeta(id,{playCount:track.playCount,lastPlayed:track.lastPlayed}).catch(()=>{});
 
   audio.pause();
   audio.src=src;
@@ -4275,11 +4291,7 @@ async function saveLyrics(){
   if(!currentTrackId) return;
   const track=tracks.find(t=>t.id===currentTrackId);
   track.lyrics=document.getElementById('lyrics-textarea').value.trim();
-  // Only write metadata fields — fetch artData from DB if stripped from memory
-  const meta=Object.assign({},track);
-  if(!meta.artData){const dbArt=await dbGetTrackArtData(currentTrackId);if(dbArt)meta.artData=dbArt;}
-  delete meta.fileData;
-  await dbPut('tracks',meta);
+  await dbUpdateTrackMeta(currentTrackId,{lyrics:track.lyrics});
   cancelLyricsEdit();
   toast('Lyrics saved');
 }
@@ -4374,7 +4386,7 @@ async function handleArtChange(file){
     const artData=e.target.result;
     const track=tracks.find(t=>t.id===currentTrackId);
     track.artData=artData;
-    await dbPut('tracks',track);
+    await dbUpdateTrackMeta(currentTrackId,{artData});
     updatePlayerUI(track);
     renderCurrentView();
     toast('Cover art updated');
@@ -4409,11 +4421,7 @@ function editTrackField(field){
     const val=inp.value.trim();
     if(val){
       track[field]=val;
-      // Only write metadata fields — fetch artData from DB if stripped from memory
-      const meta=Object.assign({},track);
-      if(!meta.artData){const dbArt=await dbGetTrackArtData(track.id);if(dbArt)meta.artData=dbArt;}
-      delete meta.fileData;
-      await dbPut('tracks',meta);
+      await dbUpdateTrackMeta(track.id,{[field]:val});
       // Refresh displayed info
       if(field==='title'){document.getElementById('np-song').textContent=val;document.getElementById('player-title').textContent=val;document.getElementById('mini-title').textContent=val;}
       if(field==='artist'){document.getElementById('np-artist').textContent=val;document.getElementById('player-artist').textContent=val;document.getElementById('mini-artist').textContent=val;}
