@@ -645,6 +645,8 @@ body.is-playing .playing-anim span{
 .folder-item svg{width:22px;height:22px;color:var(--accent);flex-shrink:0;filter:drop-shadow(0 0 4px rgba(0,212,232,0.4))}
 .folder-name{font-size:14px;font-weight:500;color:var(--text)}
 .folder-count{font-size:12px;color:var(--text-muted);margin-left:auto;font-family:'Exo 2',sans-serif;font-weight:600}
+.folder-item .playlist-del{opacity:0;margin-left:10px}
+.folder-item:hover .playlist-del{opacity:1}
 .folder-breadcrumb{display:flex;align-items:center;gap:6px;margin-bottom:16px;flex-wrap:wrap}
 .breadcrumb-item{
   font-size:13px;color:var(--text-muted);cursor:pointer;
@@ -2885,7 +2887,13 @@ function readFileMeta(file){
       title:file.name.replace(/\.[^.]+$/,'').replace(/^[\d\s\-_.]+/,'').trim()||file.name,
       artist:'Unknown Artist', album:'Unknown Album',
       genre:'', year:'', duration:0, lyrics:'',
-      folder:file.webkitRelativePath?file.webkitRelativePath.split('/').slice(0,-1).join('/'):'',
+      folder:(()=>{
+        if(!file.webkitRelativePath) return '';
+        const parts=file.webkitRelativePath.split('/').slice(0,-1);
+        // Android content provider injects a meaningless 'document' root — strip it
+        if(parts.length>0&&parts[0].toLowerCase()==='document') parts.shift();
+        return parts.join('/');
+      })(),
       artData:null, fileData:null
     };
 
@@ -3484,6 +3492,35 @@ function renderArtists(c,filtered){
     </div>`).join('')}</div>`;
 }
 
+// Strip Android content-provider "document" root from stored paths for display.
+// Existing tracks imported on Android have folder="document/..." or folder="document".
+function folderDisplayPath(path){
+  if(!path||path==='-') return path;
+  const parts=path.split('/');
+  if(parts[0].toLowerCase()==='document') parts.shift();
+  return parts.join('/')||path; // fallback to original if stripping leaves empty
+}
+
+async function deleteFolder(folderPath){
+  const affected=tracks.filter(t=>(t.folder||'')===folderPath||(t.folder||'').startsWith(folderPath+'/'));
+  if(!affected.length) return;
+  const label=folderDisplayPath(folderPath)||folderPath;
+  if(!confirm(`Remove all ${affected.length} song${affected.length>1?'s':''} in "${label}" from your library?`)) return;
+  const ids=new Set(affected.map(t=>t.id));
+  // Remove from memory
+  tracks=tracks.filter(t=>!ids.has(t.id));
+  // Remove from IDB in parallel
+  await Promise.all([...ids].map(id=>dbDelete('tracks',id).catch(()=>{})));
+  // Stop playback if current track was in this folder
+  if(currentTrackId&&ids.has(currentTrackId)){
+    audio.pause(); audio.src=''; currentTrackId=null;
+  }
+  // Clean up queue
+  queue=queue.filter(id=>!ids.has(id));
+  updateBadges(); renderCurrentView();
+  toast(`Removed ${affected.length} song${affected.length>1?'s':''}`);
+}
+
 function renderFolders(c){
   const paths={};
   tracks.forEach(t=>{
@@ -3499,15 +3536,23 @@ function renderFolders(c){
   c.innerHTML=`
     <div class="folder-breadcrumb">
       <span class="breadcrumb-item ${depth===0?'active':''}" onclick="folderPath=[];renderCurrentView()">All Folders</span>
-      ${folderPath.map((p,i)=>`<span class="breadcrumb-sep">›</span><span class="breadcrumb-item ${i===folderPath.length-1?'active':''}" onclick="folderPath=folderPath.slice(0,${i+1});renderCurrentView()">${escHTML(p)}</span>`).join('')}
+      ${folderPath.filter(p=>p.toLowerCase()!=='document').map((p,i)=>`<span class="breadcrumb-sep">›</span><span class="breadcrumb-item ${i===folderPath.length-1?'active':''}" onclick="folderPath=folderPath.slice(0,${i+1});renderCurrentView()">${escHTML(p)}</span>`).join('')}
     </div>
     ${depth>0&&tracksInCurrent.length?`<div class="track-list">${(()=>{const ids=JSON.stringify(tracksInCurrent.map(t=>t.id));return tracksInCurrent.map((t,i)=>trackRowHTML(t,i+1,ids)).join('');})()}</div>`:''}
-    ${visible.filter(f=>f.name!==folderPath.join('/')).map(f=>`
+    ${visible.filter(f=>f.name!==folderPath.join('/')).map(f=>{
+      const dp=folderDisplayPath(f.name);
+      const label=escHTML(dp.split('/').pop()||dp||f.name);
+      const safe=f.name.replace(/'/g,"\\'" );
+      return `
       <div class="folder-item" onclick="folderPath='${escHTML(f.name)}'.split('/');renderCurrentView()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-        <span class="folder-name">${escHTML(f.name.split('/').pop()||f.name)}</span>
+        <span class="folder-name">${label}</span>
         <span class="folder-count">${f.tracks.length}</span>
-      </div>`).join('')}`;
+        <button class="playlist-del" onclick="event.stopPropagation();deleteFolder('${safe}')" title="Remove folder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>`;
+    }).join('')}`;
 }
 
 function renderPlaylists(c){
