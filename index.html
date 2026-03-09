@@ -859,7 +859,33 @@ body.is-playing .playing-anim span{
   backdrop-filter:blur(12px)!important;
 }
 
-/* ─── LONG PRESS HIGHLIGHT ───────────────── */
+/* ─── UPDATE TOAST ──────────────────────────── */
+#update-toast{
+  position:fixed;bottom:calc(var(--player-h) + 14px);left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:rgba(8,14,28,0.97);
+  border:1px solid rgba(0,212,232,0.35);
+  backdrop-filter:blur(20px);
+  border-radius:14px;
+  padding:12px 16px;
+  display:flex;align-items:center;gap:12px;
+  z-index:999;
+  opacity:0;pointer-events:none;
+  transition:opacity .3s ease, transform .3s ease;
+  box-shadow:0 8px 32px rgba(0,0,0,.6),0 0 0 1px rgba(0,212,232,0.1);
+  white-space:nowrap;
+}
+#update-toast.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+#update-toast svg{width:18px;height:18px;flex-shrink:0;color:var(--accent2)}
+#update-toast-text{font-size:13px;color:var(--text)}
+#update-toast-btn{
+  background:linear-gradient(135deg,var(--accent),var(--accent3));
+  border:none;border-radius:8px;
+  padding:6px 14px;font-size:12px;font-weight:700;
+  color:#000;cursor:pointer;font-family:'Outfit',sans-serif;
+  transition:opacity .15s;flex-shrink:0;
+}
+#update-toast-btn:hover{opacity:.85}
 .track-row.long-press-active::after{
   content:'';position:absolute;inset:0;border-radius:12px;
   background:rgba(0,212,232,0.07);pointer-events:none;
@@ -1004,12 +1030,13 @@ body.is-playing .vis-bars:hover{opacity:1}
 }
 /* Queue sheet - slides up inside NP overlay */
 #np-panel-queue{
-  position:absolute;inset:0;z-index:10;
+  position:fixed;inset:0;z-index:150;
   display:flex;flex-direction:column;
   background:var(--bg);
   transform:translateY(100%);
   transition:transform 0.35s cubic-bezier(0.4,0,0.2,1);
   pointer-events:none;
+  will-change:transform;
 }
 #np-panel-queue.open{
   transform:translateY(0);
@@ -1355,38 +1382,11 @@ body.is-playing .vis-bars:hover{opacity:1}
 }
 
 /* ─── QUEUE PANEL ───────────────────────── */
-#queue-panel{
-  position:fixed;right:0;top:0;bottom:var(--player-h);width:300px;
-  background:rgba(6,11,22,0.97);
-  border-left:1px solid rgba(0,212,232,0.1);
-  z-index:35;transform:translateX(100%);
-  transition:transform .35s cubic-bezier(0.4,0,0.2,1);
-  display:flex;flex-direction:column;
-  backdrop-filter:blur(20px);
-}
-#queue-panel.open{transform:translateX(0)}
-@media(max-width:768px){#queue-panel{top:0;bottom:124px;width:100%;border-left:none}}
-.queue-header{
-  padding:22px 18px 16px;
-  border-bottom:1px solid rgba(0,212,232,0.07);
-  display:flex;align-items:center;gap:10px;
-}
-.queue-title{
-  font-family:'Exo 2',sans-serif;font-size:17px;font-weight:800;flex:1;
-  letter-spacing:-.2px;
-}
-.queue-close{
-  background:rgba(255,255,255,0.04);border:none;cursor:pointer;
-  color:var(--text-muted);padding:6px;border-radius:8px;
-  transition:all var(--transition);
-}
-.queue-close:hover{color:var(--text);background:rgba(255,255,255,0.08)}
-.queue-close svg{width:17px;height:17px;display:block}
-.queue-list{flex:1;overflow-y:auto;padding:8px}
+
 .q-item{
   display:flex;align-items:center;gap:10px;
   padding:8px 10px;border-radius:10px;
-  cursor:pointer;transition:all var(--transition);
+  cursor:pointer;transition:background .15s,box-shadow .1s;
 }
 .q-item:hover{background:rgba(0,212,232,0.05)}
 .q-item.playing{
@@ -2214,22 +2214,7 @@ body.is-playing .vis-bars:hover{opacity:1}
 .track-row:hover .track-queue-handle{opacity:1}
 .track-row:active .track-queue-handle,.track-queue-handle:active{cursor:grabbing}
 .track-queue-handle svg{width:16px;height:16px}
-/* Queue view track rows get drag handle column */
-#queue-view-list .track-row{
-  grid-template-columns:30px 52px 1fr auto auto auto;
-}
-#queue-view-list .track-row .q-drag-handle{
-  width:30px;display:flex;align-items:center;justify-content:center;opacity:0.5;
-}
-#queue-view-list .track-row .q-drag-handle:hover,
-#queue-view-list .track-row .q-drag-handle:active{opacity:1;cursor:grab}
-/* Always show track-more dots in queue view */
-#queue-view-list .track-row .track-more{
-  opacity:1 !important;color:rgba(255,255,255,0.4);
-}
-#queue-view-list .track-row .track-more:hover{
-  color:var(--text);background:var(--accent-glow3);
-}
+
 </style>
 </head>
 <body>
@@ -2287,9 +2272,9 @@ body.is-playing .vis-bars:hover{opacity:1}
     Favorites
     <span class="nav-badge" id="badge-favs">0</span>
   </div>
-  <div class="nav-item" data-view="queue" onclick="navigate('queue')">
+  <div class="nav-item" data-view="savedQueues" onclick="navigate('savedQueues')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-    Queue
+    Queues
   </div>
 
   <div class="sidebar-section">More</div>
@@ -2335,16 +2320,6 @@ body.is-playing .vis-bars:hover{opacity:1}
   </div>
 </div>
 
-<!-- QUEUE PANEL -->
-<div id="queue-panel">
-  <div class="queue-header">
-    <div class="queue-title">Up Next</div>
-    <button class="queue-close" onclick="toggleQueue()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-  </div>
-  <div class="queue-list" id="queue-list"></div>
-</div>
 
 <!-- PLAYER BAR -->
 <div id="player">
@@ -2413,7 +2388,7 @@ body.is-playing .vis-bars:hover{opacity:1}
         <div class="vol-fill" id="vol-fill" style="width:80%"></div>
       </div>
     </div>
-    <button class="queue-btn" id="queue-toggle-btn" onclick="toggleQueue()" title="Queue">
+    <button class="queue-btn" id="queue-toggle-btn" onclick="openQueueOverlay()" title="Queue">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
     </button>
   </div>
@@ -2553,24 +2528,33 @@ body.is-playing .vis-bars:hover{opacity:1}
       </div>
     </div>
   </div>
+</div>
 
-  <!-- QUEUE SHEET (slides up over NP content) -->
-  <div id="np-panel-queue">
-    <div class="np-queue-sheet-header">
-      <button class="np-queue-back-btn" onclick="closeNpQueuePanel()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-      </button>
-      <span class="lyrics-title" style="flex:1;text-align:center">Up Next</span>
-      <button class="lyrics-edit-btn" onclick="queue=[];queueIndex=-1;renderNpQueue();renderQueue()" style="color:rgba(255,78,106,.7);border-color:rgba(255,78,106,.2)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
-        Clear
-      </button>
-    </div>
-    <div class="lyrics-content" id="np-queue-list" style="padding:0;flex:1;overflow-y:auto"></div>
+<!-- QUEUE SHEET (standalone full-screen overlay) -->
+<div id="np-panel-queue">
+  <div class="np-queue-sheet-header">
+    <button class="np-queue-back-btn" onclick="closeNpQueuePanel()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <span class="lyrics-title" style="flex:1;text-align:center">Up Next</span>
+    <button class="lyrics-edit-btn" onclick="promptSaveQueue()" style="color:rgba(74,234,255,.8);border-color:rgba(74,234,255,.2)" title="Save as named queue">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Save
+    </button>
+    <button class="lyrics-edit-btn" onclick="queue=[];queueIndex=-1;renderNpQueue()" style="color:rgba(255,78,106,.7);border-color:rgba(255,78,106,.2)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+      Clear
+    </button>
   </div>
+  <div class="lyrics-content" id="np-queue-list" style="padding:0;flex:1;overflow-y:auto"></div>
 </div>
 <input type="file" id="art-input" accept="image/*" style="display:none" onchange="handleArtChange(this.files[0])">
 <div id="exit-toast">Press back again to exit</div>
+<div id="update-toast">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.09-5"/></svg>
+  <span id="update-toast-text">Update ready</span>
+  <button id="update-toast-btn" onclick="applyUpdate()">Reload</button>
+</div>
 
 <!-- Import progress overlay -->
 <div id="import-progress" style="display:none">
@@ -2592,7 +2576,7 @@ body.is-playing .vis-bars:hover{opacity:1}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
     Songs
   </div>
-  <div class="bnav-item" id="bnav-queue" onclick="navigate('queue');setBottomNav('queue')">
+  <div class="bnav-item" id="bnav-queue" onclick="openQueueOverlay()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
     Queue
   </div>
@@ -2684,17 +2668,17 @@ body.is-playing .vis-bars:hover{opacity:1}
 
 <script>
 // ==================== STATE ====================
-const DB_NAME='AuraDB',DB_VER=3;
+const DB_NAME='AuraDB',DB_VER=4;
 let db,audio=document.getElementById('audio');
 let tracks=[],queue=[],queueIndex=-1;
-let playlists=[],favorites=new Set();
+let playlists=[],favorites=new Set(),savedQueues=[];
 let currentView='library',currentTrackId=null;
 let shuffle=false,repeat=0; // 0=none,1=all,2=one
 let shuffleOrder=[],shufflePos=0;
 let volume=0.8,muted=false;
 let searchQ='',sortMode='title';
 let ctxTrackId=null,modalCallback=null;
-let queueOpen=false,npOpen=false;
+let npOpen=false;
 let folderPath=[];
 let addToPlaylistTarget=null;
 let visInterval=null;
@@ -2708,6 +2692,7 @@ function initDB(){
       if(!d.objectStoreNames.contains('tracks'))d.createObjectStore('tracks',{keyPath:'id',autoIncrement:true});
       if(!d.objectStoreNames.contains('playlists'))d.createObjectStore('playlists',{keyPath:'id',autoIncrement:true});
       if(!d.objectStoreNames.contains('settings'))d.createObjectStore('settings',{keyPath:'key'});
+      if(!d.objectStoreNames.contains('savedQueues'))d.createObjectStore('savedQueues',{keyPath:'id',autoIncrement:true});
     };
     req.onsuccess=e=>{db=e.target.result;res()};
     req.onerror=()=>rej(req.error);
@@ -2721,23 +2706,32 @@ function dbGetAll(store){
     req.onerror=()=>rej(req.error);
   });
 }
-// Load tracks metadata only (strips fileData for fast startup)
+// Load tracks metadata using a cursor — processes ONE record at a time so large
+// fileData/artData blobs are stripped immediately and never all live in memory at once.
+// getAll() would deserialize every record into a single array first (potentially
+// hundreds of MB of audio blobs) before our stripping .map() could run — OOM on mobile.
 function dbGetAllTracksMeta(){
   return new Promise((res,rej)=>{
     const tx=db.transaction('tracks','readonly');
-    const store=tx.objectStore('tracks');
     const results=[];
-    const req=store.openCursor();
+    const req=tx.objectStore('tracks').openCursor();
     req.onsuccess=e=>{
       const cursor=e.target.result;
-      if(cursor){
-        const t=Object.assign({},cursor.value);
-        t.fileData=null; // drop large audio data; load on demand
-        results.push(t);
-        cursor.continue();
-      } else {
-        res(results);
-      }
+      if(!cursor){res(results);return;}
+      const t=cursor.value;
+      // Strip large blobs immediately before pushing — the original cursor.value
+      // reference (with its blobs) becomes unreachable after this and can be GC'd
+      results.push({
+        id:t.id, name:t.name, size:t.size,
+        title:t.title, artist:t.artist, album:t.album,
+        genre:t.genre, year:t.year, duration:t.duration,
+        lyrics:t.lyrics, folder:t.folder,
+        trackNum:t.trackNum, diskNum:t.diskNum,
+        comment:t.comment, playCount:t.playCount,
+        lastPlayed:t.lastPlayed,
+        artData:null, fileData:null
+      });
+      cursor.continue();
     };
     req.onerror=()=>rej(req.error);
   });
@@ -2748,6 +2742,15 @@ function dbGetTrackFileData(id){
     const tx=db.transaction('tracks','readonly');
     const req=tx.objectStore('tracks').get(id);
     req.onsuccess=()=>res(req.result?req.result.fileData:null);
+    req.onerror=()=>rej(req.error);
+  });
+}
+// Fetch a single track's artData lazily when playing
+function dbGetTrackArtData(id){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction('tracks','readonly');
+    const req=tx.objectStore('tracks').get(id);
+    req.onsuccess=()=>res(req.result?req.result.artData:null);
     req.onerror=()=>rej(req.error);
   });
 }
@@ -2813,22 +2816,31 @@ async function handleFiles(fileList){
   label.textContent=`Importing ${files.length} track${files.length>1?'s':''}…`;
   sub.innerHTML='<span>Reading files…</span><span>0 / '+files.length+'</span>';
 
-  let added=0, skipped=0, i=0;
-  for(const file of files){
-    i++;
-    const pct=Math.round((i/files.length)*100);
-    fill.style.width=pct+'%';
-    sub.innerHTML=`<span>${truncate(file.name,32)}</span><span>${i} / ${files.length}</span>`;
-    // Yield to browser to repaint
-    await new Promise(r=>setTimeout(r,0));
+  let added=0, skipped=0, processed=0;
+  const CONCURRENCY=5; // process 5 files in parallel — saturates IDB write throughput
 
+  async function processFile(file){
     const exists=tracks.find(t=>t.name===file.name&&t.size===file.size);
-    if(exists){skipped++;continue;}
+    if(exists){skipped++;return;}
     const track=await readFileMeta(file);
     const id=await dbPut('tracks',track);
     track.id=id;
     tracks.push(track);
     added++;
+  }
+
+  // Process files in parallel batches
+  for(let i=0;i<files.length;i+=CONCURRENCY){
+    const batch=files.slice(i,i+CONCURRENCY);
+    await Promise.all(batch.map(async file=>{
+      processed++;
+      const pct=Math.round((processed/files.length)*100);
+      fill.style.width=pct+'%';
+      sub.innerHTML=`<span>${truncate(file.name,32)}</span><span>${processed} / ${files.length}</span>`;
+      await processFile(file);
+    }));
+    // Yield between batches so the UI can repaint
+    await new Promise(r=>setTimeout(r,0));
   }
 
   // Done — hide progress
@@ -2858,76 +2870,76 @@ function readFileMeta(file){
       folder:file.webkitRelativePath?file.webkitRelativePath.split('/').slice(0,-1).join('/'):'',
       artData:null, fileData:null
     };
-    const reader=new FileReader();
-    reader.onload=e=>{
-      track.fileData=e.target.result;
 
-      const getDuration=()=>new Promise(res=>{
-        const a=new Audio(track.fileData);
-        a.onloadedmetadata=()=>res(a.duration);
-        a.onerror=()=>res(0);
-        // Fallback timeout
-        setTimeout(()=>res(0),3000);
+    // 1. Get duration using object URL — doesn't require reading entire file first
+    const getDuration=()=>new Promise(res=>{
+      const objUrl=URL.createObjectURL(file);
+      const a=new Audio();
+      const cleanup=()=>{URL.revokeObjectURL(objUrl);a.src=''};
+      a.onloadedmetadata=()=>{res(a.duration);cleanup()};
+      a.onerror=()=>{res(0);cleanup()};
+      setTimeout(()=>{res(0);cleanup()},4000);
+      a.src=objUrl;
+    });
+
+    // 2. Read tags — runs on raw file bytes (only reads header, fast even for FLAC)
+    const readTags=()=>new Promise(res=>{
+      if(typeof jsmediatags==='undefined'){res(null);return}
+      jsmediatags.read(file,{
+        onSuccess:tag=>res(tag),
+        onError:()=>res(null)
       });
+    });
 
-      if(typeof jsmediatags!=='undefined'){
-        jsmediatags.read(file,{
-          onSuccess:async(tag)=>{
-            const t=tag.tags;
-            // Core fields
-            if(t.title && t.title.trim())  track.title  = t.title.trim();
-            if(t.artist && t.artist.trim()) track.artist = t.artist.trim();
-            if(t.album && t.album.trim())   track.album  = t.album.trim();
-            if(t.genre && t.genre.trim())   track.genre  = t.genre.trim().replace(/^\(?\d+\)?$/,''); // strip numeric genre codes
-            if(t.year)   track.year   = String(t.year).trim();
-            if(t.track)  track.trackNum = parseInt(t.track)||0;
-            if(t.disk)   track.diskNum  = parseInt(t.disk)||0;
-            if(t.comment) track.comment = (typeof t.comment==='object'?t.comment.text:t.comment)||'';
+    // 3. Read full file as data URL — needed for IndexedDB storage and playback
+    const readFileData=()=>new Promise(res=>{
+      const reader=new FileReader();
+      reader.onload=e=>res(e.target.result);
+      reader.onerror=()=>res(null);
+      reader.readAsDataURL(file);
+    });
 
-            // Lyrics from USLT (Unsynchronised Lyrics) tag
-            if(t.lyrics) track.lyrics = typeof t.lyrics==='object'?(t.lyrics.lyrics||t.lyrics.text||''):t.lyrics;
-            // Also check USLT directly
-            if(!track.lyrics && tag.tags.USLT) track.lyrics = tag.tags.USLT.lyrics||'';
-            if(!track.lyrics && tag.tags['SYLT']) {/* skip sync lyrics for now */}
+    // Run all three in parallel
+    Promise.all([getDuration(), readTags(), readFileData()]).then(([dur, tag, fileData])=>{
+      track.duration=dur||0;
+      track.fileData=fileData;
 
-            // Album art — handle both APIC and PIC frames
-            const pic = t.picture || (tag.tags.APIC ? tag.tags.APIC : null);
-            if(pic){
-              try{
-                const {data,format}=pic;
-                // data can be Array or Uint8Array
-                const bytes=data instanceof Uint8Array?data:new Uint8Array(data);
-                // Convert to base64 in chunks to avoid call stack overflow
-                let b64='';
-                const chunkSize=8192;
-                for(let i=0;i<bytes.length;i+=chunkSize){
-                  b64+=String.fromCharCode(...bytes.subarray(i,i+chunkSize));
-                }
-                // Normalise MIME type
-                const mime=format.includes('/')
-                  ? format
-                  : format.toLowerCase().includes('png')?'image/png'
-                  : format.toLowerCase().includes('gif')?'image/gif'
-                  : 'image/jpeg';
-                track.artData=`data:${mime};base64,${btoa(b64)}`;
-              }catch(err){console.warn('Art decode error',err)}
+      if(tag){
+        const t=tag.tags;
+        if(t.title && t.title.trim())  track.title  = t.title.trim();
+        if(t.artist && t.artist.trim()) track.artist = t.artist.trim();
+        if(t.album && t.album.trim())   track.album  = t.album.trim();
+        if(t.genre && t.genre.trim())   track.genre  = t.genre.trim().replace(/^\(?\d+\)?$/,'');
+        if(t.year)   track.year   = String(t.year).trim();
+        if(t.track)  track.trackNum = parseInt(t.track)||0;
+        if(t.disk)   track.diskNum  = parseInt(t.disk)||0;
+        if(t.comment) track.comment = (typeof t.comment==='object'?t.comment.text:t.comment)||'';
+
+        if(t.lyrics) track.lyrics = typeof t.lyrics==='object'?(t.lyrics.lyrics||t.lyrics.text||''):t.lyrics;
+        if(!track.lyrics && tag.tags.USLT) track.lyrics = tag.tags.USLT.lyrics||'';
+
+        const pic = t.picture || (tag.tags.APIC ? tag.tags.APIC : null);
+        if(pic){
+          try{
+            const {data,format}=pic;
+            const bytes=data instanceof Uint8Array?data:new Uint8Array(data);
+            let b64='';
+            const chunkSize=8192;
+            for(let i=0;i<bytes.length;i+=chunkSize){
+              b64+=String.fromCharCode(...bytes.subarray(i,i+chunkSize));
             }
-
-            track.duration=await getDuration();
-            resolve(track);
-          },
-          onError:async()=>{
-            track.duration=await getDuration();
-            resolve(track);
-          }
-        });
-      } else {
-        // jsmediatags not loaded — try to at least get title from filename
-        getDuration().then(d=>{track.duration=d;resolve(track)});
+            const mime=format.includes('/')
+              ? format
+              : format.toLowerCase().includes('png')?'image/png'
+              : format.toLowerCase().includes('gif')?'image/gif'
+              : 'image/jpeg';
+            track.artData=`data:${mime};base64,${btoa(b64)}`;
+          }catch(err){console.warn('Art decode error',err)}
+        }
       }
-    };
-    reader.onerror=()=>resolve(track);
-    reader.readAsDataURL(file);
+
+      resolve(track);
+    });
   });
 }
 
@@ -2953,15 +2965,21 @@ async function playTrack(id,resetQueue=false){
     track.fileData=src; // cache in memory for this session
   }
 
+  // Lazy-load artData if not already in memory
+  if(!track.artData){
+    const art=await dbGetTrackArtData(id);
+    if(gen!==_playGen) return;
+    if(art) track.artData=art; // cache in memory for this session
+  }
+
   // Guard again after any await
   if(gen!==_playGen) return;
 
-  // Track play count — save only metadata (avoid writing full fileData unnecessarily)
+  // Track play count — save metadata only; do NOT re-write the audio blob
   track.playCount=(track.playCount||0)+1;
   track.lastPlayed=Date.now();
-  // Save only metadata fields to DB, not the full object with fileData
-  const meta={...track};
-  // fileData stays in memory but we save it in DB too so it persists
+  const meta=Object.assign({},track);
+  delete meta.fileData; // blob already in DB from import — skip expensive re-write
   dbPut('tracks',meta).catch(()=>{});
 
   audio.pause();
@@ -2974,8 +2992,22 @@ async function playTrack(id,resetQueue=false){
   updateMediaSession(track);
   saveSetting('lastTrack',id);
   saveSetting('lastPos',0);
-  renderCurrentView();
-  renderQueue();
+  updatePlayingHighlight(id); // patch .playing class — no full DOM rebuild
+  renderNpQueue();
+}
+
+// Patch .playing highlight on visible rows without rebuilding the DOM
+function updatePlayingHighlight(id){
+  document.querySelectorAll('.track-row[data-id]').forEach(el=>{
+    el.classList.toggle('playing',parseInt(el.dataset.id)===id);
+  });
+  // Also refresh q-items in the NP queue sheet if open
+  document.querySelectorAll('.q-item[data-qi]').forEach(el=>{
+    const qId=queue[parseInt(el.dataset.qi)];
+    el.classList.toggle('playing',qId===id);
+    const title=el.querySelector('.q-title');
+    if(title)title.classList.toggle('playing',qId===id);
+  });
 }
 
 function updatePlayerUI(track){
@@ -3131,12 +3163,12 @@ function buildShuffleOrder(){
 function addToQueueAfterCurrent(id){
   const idx=queueIndex+1;
   queue.splice(idx,0,id);
-  renderQueue();
+  renderNpQueue();
   toast('Playing next');
 }
 function addToQueueEnd(id){
   queue.push(id);
-  renderQueue();
+  renderNpQueue();
   toast('Added to queue');
 }
 
@@ -3164,6 +3196,7 @@ function toggleMute(){
 }
 
 // ==================== AUDIO EVENTS ====================
+let _lastPosSaveTimer=null;
 audio.addEventListener('timeupdate',()=>{
   if(!audio.duration)return;
   const pct=(audio.currentTime/audio.duration*100)+'%';
@@ -3173,7 +3206,15 @@ audio.addEventListener('timeupdate',()=>{
   const cur=formatTime(audio.currentTime);
   document.getElementById('time-current').textContent=cur;
   document.getElementById('np-time-current').textContent=cur;
-  saveSetting('lastPos',audio.currentTime);
+  // Throttle IDB writes to once every 5s — timeupdate fires up to 250x/sec
+  // and each saveSetting opens a readwrite transaction; un-throttled this
+  // creates a transaction storm that exhausts memory on Android.
+  if(!_lastPosSaveTimer){
+    _lastPosSaveTimer=setTimeout(()=>{
+      saveSetting('lastPos',audio.currentTime);
+      _lastPosSaveTimer=null;
+    },5000);
+  }
 });
 audio.addEventListener('loadedmetadata',()=>{
   const tot=formatTime(audio.duration);
@@ -3307,7 +3348,7 @@ async function removeFromPlaylist(playlistId,trackId){
 // ==================== NAVIGATION ====================
 function setBottomNav(view){
   document.querySelectorAll('.bnav-item').forEach(el=>el.classList.remove('active'));
-  const map={library:'bnav-library',queue:'bnav-queue',playlists:'bnav-playlists',favorites:'bnav-favorites'};
+  const map={library:'bnav-library',playlists:'bnav-playlists',favorites:'bnav-favorites'};
   if(map[view])document.getElementById(map[view]).classList.add('active');
 }
 function navigate(view,extra){
@@ -3315,7 +3356,7 @@ function navigate(view,extra){
   document.querySelectorAll('.nav-item').forEach(el=>{
     el.classList.toggle('active',el.dataset.view===view);
   });
-  const titles={library:'Songs',albums:'Albums',artists:'Artists',folders:'Folders',playlists:'Playlists',favorites:'Favorites',queue:'Queue',about:'About'};
+  const titles={library:'Songs',albums:'Albums',artists:'Artists',folders:'Folders',playlists:'Playlists',favorites:'Favorites',savedQueues:'Queues',about:'About'};
   document.getElementById('page-title').textContent=extra||titles[view]||view;
   setBottomNav(view);
   renderCurrentView();
@@ -3342,7 +3383,7 @@ function renderCurrentView(){
     case'folders':renderFolders(c);break;
     case'playlists':renderPlaylists(c);break;
     case'favorites':renderFavorites(c,filtered);break;
-    case'queue':renderQueueView(c);break;
+    case'savedQueues':renderSavedQueues(c);break;
     case'about':renderAbout(c);break;
     default:if(currentView.startsWith('playlist:')){
       const id=parseInt(currentView.split(':')[1]);
@@ -3356,11 +3397,13 @@ function renderCurrentView(){
 }
 
 // ==================== VIEW RENDERERS ====================
+// Single Collator instance — much faster than localeCompare() creating one implicitly per call
+const _coll=new Intl.Collator(undefined,{sensitivity:'base',numeric:true});
 function sortTracks(arr){
   const s=[...arr];
-  if(sortMode==='title')s.sort((a,b)=>a.title.localeCompare(b.title));
-  else if(sortMode==='artist')s.sort((a,b)=>a.artist.localeCompare(b.artist));
-  else if(sortMode==='album')s.sort((a,b)=>a.album.localeCompare(b.album));
+  if(sortMode==='title')s.sort((a,b)=>_coll.compare(a.title,b.title));
+  else if(sortMode==='artist')s.sort((a,b)=>_coll.compare(a.artist,b.artist));
+  else if(sortMode==='album')s.sort((a,b)=>_coll.compare(a.album,b.album));
   else if(sortMode==='recent')s.reverse();
   return s;
 }
@@ -3368,6 +3411,7 @@ function sortTracks(arr){
 function renderLibrary(c,filtered){
   if(!tracks.length){c.innerHTML=emptyState('music','No music yet','Add your music files or folders to get started','Add Music','showImportOptions()');return}
   const sorted=sortTracks(filtered);
+  const listIds=JSON.stringify(sorted.map(t=>t.id));
   c.innerHTML=`
   <div class="stat-chips stagger">
     <div class="stat-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><strong>${tracks.length}</strong> Songs</div>
@@ -3385,7 +3429,7 @@ function renderLibrary(c,filtered){
       <button class="btn-sm ghost" onclick="showImportOptions()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add</button>
     </div>
   </div>
-  <div class="track-list stagger">${sorted.map((t,i)=>trackRowHTML(t,i+1,sorted)).join('')}</div>`;
+  <div class="track-list stagger">${sorted.map((t,i)=>trackRowHTML(t,i+1,listIds)).join('')}</div>`;
 }
 
 function renderAlbums(c,filtered){
@@ -3397,7 +3441,7 @@ function renderAlbums(c,filtered){
     map[k].tracks.push(t);
     if(!map[k].art&&t.artData)map[k].art=t.artData;
   });
-  const albums=Object.values(map).sort((a,b)=>a.name.localeCompare(b.name));
+  const albums=Object.values(map).sort((a,b)=>_coll.compare(a.name,b.name));
   c.innerHTML=`<div class="section-header"><div class="section-title">Albums</div><span class="section-count">${albums.length}</span></div>
   <div class="grid-4">${albums.map(a=>`
     <div class="grid-card" onclick="navigate('album:${encodeURIComponent(a.name)}','${escHTML(a.name)}')">
@@ -3415,7 +3459,7 @@ function renderArtists(c,filtered){
     map[k].tracks.push(t);
     if(!map[k].art&&t.artData)map[k].art=t.artData;
   });
-  const artists=Object.values(map).sort((a,b)=>a.name.localeCompare(b.name));
+  const artists=Object.values(map).sort((a,b)=>_coll.compare(a.name,b.name));
   c.innerHTML=`<div class="section-header"><div class="section-title">Artists</div><span class="section-count">${artists.length}</span></div>
   <div class="grid-4">${artists.map(a=>`
     <div class="grid-card artist-card" onclick="navigate('artist:${encodeURIComponent(a.name)}','${escHTML(a.name)}')">
@@ -3441,7 +3485,7 @@ function renderFolders(c){
       <span class="breadcrumb-item ${depth===0?'active':''}" onclick="folderPath=[];renderCurrentView()">All Folders</span>
       ${folderPath.map((p,i)=>`<span class="breadcrumb-sep">›</span><span class="breadcrumb-item ${i===folderPath.length-1?'active':''}" onclick="folderPath=folderPath.slice(0,${i+1});renderCurrentView()">${escHTML(p)}</span>`).join('')}
     </div>
-    ${depth>0&&tracksInCurrent.length?`<div class="track-list">${tracksInCurrent.map((t,i)=>trackRowHTML(t,i+1,tracksInCurrent)).join('')}</div>`:''}
+    ${depth>0&&tracksInCurrent.length?`<div class="track-list">${(()=>{const ids=JSON.stringify(tracksInCurrent.map(t=>t.id));return tracksInCurrent.map((t,i)=>trackRowHTML(t,i+1,ids)).join('');})()}</div>`:''}
     ${visible.filter(f=>f.name!==folderPath.join('/')).map(f=>`
       <div class="folder-item" onclick="folderPath='${escHTML(f.name)}'.split('/');renderCurrentView()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
@@ -3494,7 +3538,7 @@ function renderPlaylistDetail(c,id){
         </div>
       </div>
     </div>
-    ${plTracks.length?`<div class="track-list" id="pl-track-list">${plTracks.map((t,i)=>trackRowHTML(t,i+1,plTracks,'playlist:'+id)).join('')}</div>`:
+    ${plTracks.length?`<div class="track-list" id="pl-track-list">${(()=>{const ids=JSON.stringify(plTracks.map(t=>t.id));return plTracks.map((t,i)=>trackRowHTML(t,i+1,ids,'playlist:'+id)).join('');})()}</div>`:
     `<div id="pl-track-list" style="padding:40px;text-align:center;color:var(--text-muted)">This playlist is empty.<br><button class="btn-sm ghost" style="margin-top:12px" onclick="openAddSongsPicker(${id})">+ Add Songs</button></div>`}
 
     <!-- Add Songs Picker -->
@@ -3597,8 +3641,9 @@ async function confirmAddSongs(plId){
 function renderFavorites(c,filtered){
   const favTracks=filtered.filter(t=>favorites.has(t.id));
   if(!favTracks.length){c.innerHTML=emptyState('heart','No favorites yet','Heart a song to add it here','Browse Songs',`navigate('library')`);return}
+  const favIds=JSON.stringify(favTracks.map(t=>t.id));
   c.innerHTML=`<div class="section-header"><div class="section-title">Favorites</div><span class="section-count">${favTracks.length}</span></div>
-  <div class="track-list">${favTracks.map((t,i)=>trackRowHTML(t,i+1,favTracks)).join('')}</div>`;
+  <div class="track-list">${favTracks.map((t,i)=>trackRowHTML(t,i+1,favIds)).join('')}</div>`;
 }
 
 function renderAlbumDetail(c,albumEnc){
@@ -3618,7 +3663,7 @@ function renderAlbumDetail(c,albumEnc){
         </div>
       </div>
     </div>
-    <div class="track-list">${albumTracks.map((t,i)=>trackRowHTML(t,i+1,albumTracks)).join('')}</div>`;
+    <div class="track-list">${(()=>{const ids=JSON.stringify(albumTracks.map(t=>t.id));return albumTracks.map((t,i)=>trackRowHTML(t,i+1,ids)).join('');})()}</div>`;
 }
 
 function renderArtistDetail(c,artistEnc){
@@ -3638,125 +3683,17 @@ function renderArtistDetail(c,artistEnc){
         </div>
       </div>
     </div>
-    <div class="track-list">${artistTracks.map((t,i)=>trackRowHTML(t,i+1,artistTracks)).join('')}</div>`;
+    <div class="track-list">${(()=>{const ids=JSON.stringify(artistTracks.map(t=>t.id));return artistTracks.map((t,i)=>trackRowHTML(t,i+1,ids)).join('');})()}</div>`;
 }
 
-function renderQueueView(c){
-  if(!queue.length){c.innerHTML=emptyState('play','Queue is empty','Add songs to the queue','Browse Songs',`navigate('library')`);return}
-  const qTracks=queue.map(id=>tracks.find(t=>t.id===id)).filter(Boolean);
-  c.innerHTML=`<div class="section-header"><div class="section-title">Queue</div><span class="section-count">${qTracks.length} songs</span><div class="section-actions"><button class="btn-sm ghost" onclick="queue=[];queueIndex=-1;renderCurrentView()">Clear</button></div></div>
-  <div class="track-list" id="queue-view-list">${qTracks.map((t,i)=>{
-    const isPlaying=t.id===currentTrackId;
-    const isFav=favorites.has(t.id);
-    return `<div class="track-row ${isPlaying?'playing':''}" data-qi="${i}" data-id="${t.id}" draggable="true"
-      onclick="queueIndex=${i};playTrack(${t.id})"
-      oncontextmenu="showTrackMenu(${t.id},event);return false">
-      <div class="q-drag-handle track-queue-handle" onclick="event.stopPropagation()" title="Drag to reorder">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/></svg>
-      </div>
-      <div class="track-art">${t.artData?`<img src="${t.artData}" alt="" loading="lazy">`:`<div class="track-art-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>`}
-        <div class="playing-anim"><span></span><span></span><span></span><span></span></div>
-      </div>
-      <div class="track-info"><div class="track-title">${escHTML(t.title)}</div><div class="track-meta">${escHTML(t.artist)}${t.album&&t.album!=='Unknown Album'?' · '+escHTML(t.album):''}</div></div>
-      <button class="track-fav ${isFav?'active':''}" onclick="event.stopPropagation();toggleFavorite(${t.id})" title="${isFav?'Remove favorite':'Add favorite'}">
-        <svg viewBox="0 0 24 24" fill="${isFav?'#ff4e6a':'none'}" stroke="${isFav?'#ff4e6a':'currentColor'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-      </button>
-      <span class="track-dur">${formatTime(t.duration||0)}</span>
-      <button class="track-more" onclick="event.stopPropagation();showTrackMenu(${t.id},event)" title="More options">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-      </button>
-    </div>`;
-  }).join('')}</div>`;
-
-  // Wire up drag reorder on queue view
-  const list=c.querySelector('#queue-view-list');
-  let dragSrc=null,dragSrcIdx=-1;
-  list.querySelectorAll('.track-row').forEach(item=>{
-    const handle=item.querySelector('.track-queue-handle');
-    item.addEventListener('dragstart',e=>{
-      dragSrc=item; dragSrcIdx=parseInt(item.dataset.qi);
-      e.dataTransfer.effectAllowed='move';
-      setTimeout(()=>item.classList.add('dragging'),0);
-    });
-    item.addEventListener('dragend',()=>{
-      item.classList.remove('dragging');
-      list.querySelectorAll('.track-row').forEach(el=>el.classList.remove('drag-over-top','drag-over-bottom'));
-    });
-    item.addEventListener('dragover',e=>{
-      e.preventDefault(); if(item===dragSrc)return;
-      const rect=item.getBoundingClientRect(), mid=rect.top+rect.height/2;
-      list.querySelectorAll('.track-row').forEach(el=>el.classList.remove('drag-over-top','drag-over-bottom'));
-      item.classList.add(e.clientY<mid?'drag-over-top':'drag-over-bottom');
-    });
-    item.addEventListener('drop',e=>{
-      e.preventDefault(); if(!dragSrc||item===dragSrc)return;
-      const toIdx=parseInt(item.dataset.qi);
-      const insertAfter=e.clientY>=item.getBoundingClientRect().top+item.getBoundingClientRect().height/2;
-      const insertAt=insertAfter?toIdx+1:toIdx;
-      const moved=queue.splice(dragSrcIdx,1)[0];
-      const newIdx=insertAt>dragSrcIdx?insertAt-1:insertAt;
-      queue.splice(newIdx,0,moved);
-      if(dragSrcIdx===queueIndex)queueIndex=newIdx;
-      else if(dragSrcIdx<queueIndex&&newIdx>=queueIndex)queueIndex--;
-      else if(dragSrcIdx>queueIndex&&newIdx<=queueIndex)queueIndex++;
-      renderCurrentView();
-    });
-    // Touch drag
-    let tClone=null,tSrcIdx=-1,tLast=null;
-    handle.addEventListener('touchstart',e=>{
-      e.stopPropagation();
-      tSrcIdx=parseInt(item.dataset.qi);
-      item.classList.add('dragging');
-      tClone=item.cloneNode(true);
-      const rect=item.getBoundingClientRect();
-      tClone.style.cssText=`position:fixed;z-index:9999;opacity:.88;pointer-events:none;width:${item.offsetWidth}px;border-radius:12px;background:rgba(11,18,32,.97);border:1px solid rgba(0,212,232,.3);box-shadow:0 8px 32px rgba(0,0,0,.6);left:${rect.left}px;top:${rect.top}px;transition:none`;
-      document.body.appendChild(tClone);
-    },{passive:true});
-    handle.addEventListener('touchmove',e=>{
-      if(!tClone)return; e.preventDefault();
-      const t=e.touches[0];
-      tClone.style.left=(t.clientX-tClone.offsetWidth/2)+'px';
-      tClone.style.top=(t.clientY-tClone.offsetHeight/2)+'px';
-      tClone.style.display='none';
-      const under=document.elementFromPoint(t.clientX,t.clientY);
-      tClone.style.display='';
-      const over=under?under.closest('.track-row'):null;
-      if(tLast&&tLast!==over)tLast.classList.remove('drag-over-top','drag-over-bottom');
-      if(over&&over!==item){
-        const rect=over.getBoundingClientRect();
-        over.classList.remove('drag-over-top','drag-over-bottom');
-        over.classList.add(t.clientY<rect.top+rect.height/2?'drag-over-top':'drag-over-bottom');
-        tLast=over;
-      }
-    },{passive:false});
-    handle.addEventListener('touchend',()=>{
-      if(tClone){tClone.remove();tClone=null}
-      if(tLast){
-        const toIdx=parseInt(tLast.dataset.qi);
-        const isBot=tLast.classList.contains('drag-over-bottom');
-        const insertAt=isBot?toIdx+1:toIdx;
-        tLast.classList.remove('drag-over-top','drag-over-bottom'); tLast=null;
-        if(toIdx!==tSrcIdx){
-          const moved=queue.splice(tSrcIdx,1)[0];
-          const newIdx=insertAt>tSrcIdx?insertAt-1:insertAt;
-          queue.splice(newIdx,0,moved);
-          if(tSrcIdx===queueIndex)queueIndex=newIdx;
-          else if(tSrcIdx<queueIndex&&newIdx>=queueIndex)queueIndex--;
-          else if(tSrcIdx>queueIndex&&newIdx<=queueIndex)queueIndex++;
-          renderCurrentView(); return;
-        }
-      }
-      item.classList.remove('dragging');
-    },{passive:true});
-  });
-}
 
 // ==================== TRACK ROW HTML ====================
-function trackRowHTML(track,num,list,context=''){
+// listOrIds: either a pre-serialized JSON string of IDs (fast path) or an array (fallback)
+function trackRowHTML(track,num,listOrIds,context=''){
   const isPlaying=track.id===currentTrackId;
   const isFav=favorites.has(track.id);
-  const listIds=JSON.stringify(list.map(t=>t.id));
-  return `<div class="track-row ${isPlaying?'playing':''}"
+  const listIds=typeof listOrIds==='string'?listOrIds:JSON.stringify(listOrIds.map(t=>t.id));
+  return `<div class="track-row ${isPlaying?'playing':''}" data-id="${track.id}"
     onclick="playFromList(${track.id},${listIds})"
     oncontextmenu="showTrackMenu(${track.id},event);return false"
     ontouchstart="startTrackLongPress(${track.id},event)"
@@ -3855,8 +3792,7 @@ async function ctxAction(action){
     if(idx>=0){
       queue.splice(idx,1);
       if(queueIndex>=idx&&queueIndex>0) queueIndex--;
-      renderQueue();
-      if(currentView==='queue') renderCurrentView();
+      renderNpQueue();
       toast('Removed from queue');
     }
   }
@@ -4009,6 +3945,8 @@ function wireQueueDrag(container, onCommit){
     item.addEventListener('dragend',()=>{
       item.classList.remove('dragging');
       clearIndicators();
+      // Remove any orphaned ghost elements
+      document.querySelectorAll('.q-drag-ghost').forEach(g=>g.remove());
       dragSrc=null; dragSrcIdx=-1;
     });
     item.addEventListener('dragover',e=>{
@@ -4065,7 +4003,7 @@ function wireQueueDrag(container, onCommit){
         clearIndicators(); lastOver=null; lastAbove=null;
       }
     },{passive:false});
-    handle.addEventListener('touchend',()=>{
+    function wireQueueTouchCleanup(commit){
       if(touchClone){touchClone.remove();touchClone=null;}
       clearIndicators();
       item.classList.remove('dragging');
@@ -4073,51 +4011,16 @@ function wireQueueDrag(container, onCommit){
       const savedOver=lastOver, savedAbove=lastAbove;
       dragSrc=null; dragSrcIdx=-1;
       lastOver=null; lastAbove=null;
-      if(savedOver&&savedOver!==item){
+      if(commit&&savedOver&&savedOver!==item){
         commitReorder(touchSrcIdx, parseInt(savedOver.dataset.qi), savedAbove);
       }
-    },{passive:true});
+    }
+    handle.addEventListener('touchend',()=>wireQueueTouchCleanup(true),{passive:true});
+    handle.addEventListener('touchcancel',()=>wireQueueTouchCleanup(false),{passive:true});
   });
 }
 
 // ==================== QUEUE PANEL ====================
-function toggleQueue(){
-  queueOpen=!queueOpen;
-  document.getElementById('queue-panel').classList.toggle('open',queueOpen);
-  document.getElementById('queue-toggle-btn').classList.toggle('active',queueOpen);
-  document.getElementById('main').classList.toggle('queue-open',queueOpen);
-  if(queueOpen)renderQueue();
-}
-function renderQueue(){
-  const list=document.getElementById('queue-list');
-  // Also refresh NP queue list if the queue sheet is open
-  if(document.getElementById('np-panel-queue')&&document.getElementById('np-panel-queue').classList.contains('open'))renderNpQueue();
-  if(!queue.length){list.innerHTML='<div style="padding:40px 20px;text-align:center;color:var(--text-muted);font-size:13px">Queue is empty</div>';return}
-  list.innerHTML=queue.map((id,i)=>{
-    const t=tracks.find(tr=>tr.id===id);
-    if(!t)return'';
-    const isPlaying=id===currentTrackId;
-    return `<div class="q-item ${isPlaying?'playing':''}" data-qi="${i}"
-      draggable="true"
-      onclick="queueIndex=${i};playTrack(${id})">
-      <div class="q-drag-handle" title="Drag to reorder" onclick="event.stopPropagation()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/></svg>
-      </div>
-      <div class="q-art">${t.artData?`<img src="${t.artData}" alt="">`:`<div class="q-art-ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>`}</div>
-      <div class="q-info"><div class="q-title ${isPlaying?'playing':''}">${escHTML(t.title)}</div><div class="q-artist">${escHTML(t.artist)}</div></div>
-      ${isPlaying?`<div style="width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);flex-shrink:0"></div>`:''}
-    </div>`;
-  }).join('');
-
-  const playingEl=list.querySelector('.q-item.playing');
-  if(playingEl)playingEl.scrollIntoView({block:'nearest'});
-
-  wireQueueDrag(list,()=>{
-    // DOM already updated by wireQueueDrag; just sync NP queue if it's open
-    if(document.getElementById('np-panel-queue').classList.contains('open')) renderNpQueue();
-  });
-}
-
 // ==================== NOW PLAYING ====================
 function openNowPlaying(){npOpen=true;document.getElementById('now-playing-overlay').classList.add('open')}
 function closeNowPlaying(){
@@ -4126,11 +4029,6 @@ function closeNowPlaying(){
   ov.classList.add('closing');
   setTimeout(()=>{
     ov.classList.remove('open','closing');
-    // Also close queue sheet
-    const qs=document.getElementById('np-panel-queue');
-    if(qs)qs.classList.remove('open');
-    const btn=document.getElementById('np-queue-shortcut-btn');
-    if(btn){btn.style.color='rgba(255,255,255,0.45)';btn.style.filter='none';}
     switchNpTab('player');
     stopParticles();
   },360);
@@ -4177,7 +4075,12 @@ function updateBadges(){
   document.getElementById('badge-playlists').textContent=playlists.length;
   document.getElementById('badge-favs').textContent=favorites.size;
 }
-function onSearch(q){searchQ=q;renderCurrentView()}
+let _searchTimer=null;
+function onSearch(q){
+  searchQ=q;
+  clearTimeout(_searchTimer);
+  _searchTimer=setTimeout(renderCurrentView,150);
+}
 
 // ==================== NP TABS ====================
 function switchNpTab(tab){
@@ -4185,13 +4088,96 @@ function switchNpTab(tab){
   document.getElementById('np-panel-lyrics').style.display  = tab==='lyrics'?'':'none';
   document.getElementById('np-tab-player').classList.toggle('active',tab==='player');
   document.getElementById('np-tab-lyrics').classList.toggle('active',tab==='lyrics');
-  // Highlight the queue shortcut button when queue panel is open
-  const qBtn=document.getElementById('np-queue-shortcut-btn');
-  if(qBtn){
-    qBtn.style.color=tab==='queue'?'var(--accent2)':'rgba(255,255,255,0.45)';
-    qBtn.style.filter=tab==='queue'?'drop-shadow(0 0 6px rgba(0,212,232,0.6))':'none';
-  }
   if(tab==='lyrics') renderLyrics();
+}
+
+// ── Open queue from tab/button — standalone, no NP overlay needed ──
+function openQueueOverlay(){
+  openNpQueuePanel();
+}
+
+// ==================== SAVED QUEUES ====================
+async function promptSaveQueue(){
+  if(!queue.length){toast('Queue is empty');return;}
+  openModal('Save Queue','Queue name…','Save',async name=>{
+    if(!name.trim())return;
+    const sq={name:name.trim(),trackIds:[...queue],created:Date.now()};
+    const id=await dbPut('savedQueues',sq);
+    sq.id=id;
+    savedQueues.push(sq);
+    toast(`Queue "${sq.name}" saved`);
+  });
+}
+async function loadSavedQueue(id){
+  const sq=savedQueues.find(q=>q.id===id);
+  if(!sq)return;
+  // Filter to only track IDs that still exist in the library
+  queue=sq.trackIds.filter(tid=>tracks.find(t=>t.id===tid));
+  queueIndex=0;
+  renderNpQueue();
+  toast(`Loaded "${sq.name}"`);
+  // Open the queue overlay so user sees it
+  openQueueOverlay();
+}
+async function deleteSavedQueue(id){
+  await dbDelete('savedQueues',id);
+  savedQueues=savedQueues.filter(q=>q.id!==id);
+  renderCurrentView();
+  toast('Queue deleted');
+}
+function renderSavedQueues(c){
+  const liveCount=queue.length;
+  c.innerHTML=`
+  <div class="section-header">
+    <div class="section-title">Queues</div>
+    <span class="section-count">${savedQueues.length} saved</span>
+    <div class="section-actions">
+      <button class="btn-sm primary" onclick="openQueueOverlay()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>
+        View Current (${liveCount})
+      </button>
+    </div>
+  </div>
+
+  <!-- Live queue preview card -->
+  <div class="playlist-card" onclick="openQueueOverlay()" style="margin-bottom:20px;border-color:rgba(0,212,232,0.25)">
+    <div class="playlist-art" style="background:linear-gradient(135deg,rgba(0,212,232,0.2),rgba(0,212,232,0.05));display:flex;align-items:center;justify-content:center">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="1.5" style="width:26px;height:26px"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    </div>
+    <div class="playlist-info">
+      <div class="playlist-name" style="color:var(--accent2)">Current Queue</div>
+      <div class="playlist-sub">${liveCount} song${liveCount!==1?'s':''} · tap to view &amp; edit</div>
+    </div>
+    ${liveCount?`<button class="lyrics-edit-btn" onclick="event.stopPropagation();promptSaveQueue()" style="color:rgba(74,234,255,.8);border-color:rgba(74,234,255,.2);flex-shrink:0" title="Save current queue">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Save
+    </button>`:''}
+  </div>
+
+  ${savedQueues.length?`
+  <div class="section-header" style="margin-top:4px"><div class="section-title" style="font-size:15px">Saved Queues</div></div>
+  <div class="playlist-list">
+    ${savedQueues.slice().reverse().map(sq=>{
+      const count=sq.trackIds.filter(tid=>tracks.find(t=>t.id===tid)).length;
+      const dateStr=new Date(sq.created).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+      return`<div class="playlist-card" onclick="loadSavedQueue(${sq.id})">
+        <div class="playlist-art" style="background:linear-gradient(135deg,rgba(0,212,232,0.1),rgba(0,60,80,0.3));display:flex;align-items:center;justify-content:center">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-dim)" stroke-width="1.5" style="width:22px;height:22px"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        </div>
+        <div class="playlist-info">
+          <div class="playlist-name">${escHTML(sq.name)}</div>
+          <div class="playlist-sub">${count} song${count!==1?'s':''} · saved ${dateStr}</div>
+        </div>
+        <button class="playlist-del" onclick="event.stopPropagation();deleteSavedQueue(${sq.id})" title="Delete queue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+        </button>
+      </div>`;
+    }).join('')}
+  </div>`:`<div class="empty-state" style="padding:50px 20px">
+    <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="width:40px;height:40px"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg></div>
+    <div class="empty-title">No saved queues yet</div>
+    <div class="empty-sub">Build a queue then tap Save to keep it for later</div>
+  </div>`}`;
 }
 
 // Open the queue panel (slide-up sheet) from NP overlay
@@ -4199,15 +4185,11 @@ function openNpQueuePanel(){
   const sheet=document.getElementById('np-panel-queue');
   if(!sheet)return;
   sheet.classList.add('open');
-  const btn=document.getElementById('np-queue-shortcut-btn');
-  if(btn){btn.style.color='var(--accent2)';btn.style.filter='drop-shadow(0 0 6px rgba(0,212,232,0.6))';}
   renderNpQueue();
 }
 function closeNpQueuePanel(){
   const sheet=document.getElementById('np-panel-queue');
   if(sheet) sheet.classList.remove('open');
-  const btn=document.getElementById('np-queue-shortcut-btn');
-  if(btn){btn.style.color='rgba(255,255,255,0.45)';btn.style.filter='none';}
 }
 
 function renderNpQueue(){
@@ -4231,7 +4213,7 @@ function renderNpQueue(){
         <div class="q-title ${isPlaying?'playing':''}">${escHTML(t.title)}</div>
         <div class="q-artist">${escHTML(t.artist)}</div>
       </div>
-      <button onclick="event.stopPropagation();queue.splice(${i},1);if(queueIndex>=${i}&&queueIndex>0)queueIndex--;renderNpQueue();renderQueue()"
+      <button onclick="event.stopPropagation();queue.splice(${i},1);if(queueIndex>=${i}&&queueIndex>0)queueIndex--;renderNpQueue()"
         style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,.3);padding:6px;border-radius:50%;transition:all .2s"
         onmouseover="this.style.color='rgba(255,78,106,.8)';this.style.background='rgba(255,78,106,.1)'"
         onmouseout="this.style.color='rgba(255,255,255,.3)';this.style.background='none'"
@@ -4246,9 +4228,7 @@ function renderNpQueue(){
   if(playing) setTimeout(()=>playing.scrollIntoView({block:'nearest',behavior:'smooth'}),50);
 
   wireQueueDrag(el,()=>{
-    // DOM already updated; sync sidebar queue list if it's open
-    const sideList=document.getElementById('queue-list');
-    if(sideList&&document.getElementById('queue-panel')&&document.getElementById('queue-panel').classList.contains('open')) renderQueue();
+    // DOM already updated by wireQueueDrag; no secondary panel to sync
   });
 }
 
@@ -4295,7 +4275,11 @@ async function saveLyrics(){
   if(!currentTrackId) return;
   const track=tracks.find(t=>t.id===currentTrackId);
   track.lyrics=document.getElementById('lyrics-textarea').value.trim();
-  await dbPut('tracks',track);
+  // Only write metadata fields — fetch artData from DB if stripped from memory
+  const meta=Object.assign({},track);
+  if(!meta.artData){const dbArt=await dbGetTrackArtData(currentTrackId);if(dbArt)meta.artData=dbArt;}
+  delete meta.fileData;
+  await dbPut('tracks',meta);
   cancelLyricsEdit();
   toast('Lyrics saved');
 }
@@ -4425,7 +4409,11 @@ function editTrackField(field){
     const val=inp.value.trim();
     if(val){
       track[field]=val;
-      await dbPut('tracks',track);
+      // Only write metadata fields — fetch artData from DB if stripped from memory
+      const meta=Object.assign({},track);
+      if(!meta.artData){const dbArt=await dbGetTrackArtData(track.id);if(dbArt)meta.artData=dbArt;}
+      delete meta.fileData;
+      await dbPut('tracks',meta);
       // Refresh displayed info
       if(field==='title'){document.getElementById('np-song').textContent=val;document.getElementById('player-title').textContent=val;document.getElementById('mini-title').textContent=val;}
       if(field==='artist'){document.getElementById('np-artist').textContent=val;document.getElementById('player-artist').textContent=val;document.getElementById('mini-artist').textContent=val;}
@@ -4441,10 +4429,25 @@ function editTrackField(field){
   overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};
 }
 
-// ==================== ABOUT VIEW ====================
+// ==================== SW UPDATE UI ====================
+let _pendingUpdateSW=null;
+function showUpdateToast(newSW){
+  _pendingUpdateSW=newSW;
+  document.getElementById('update-toast').classList.add('show');
+}
+function applyUpdate(){
+  document.getElementById('update-toast').classList.remove('show');
+  if(_pendingUpdateSW){
+    _pendingUpdateSW.postMessage({type:'SW_SKIP_WAITING'});
+  }
+  // Reload once the new SW takes control
+  navigator.serviceWorker.addEventListener('controllerchange',()=>window.location.reload(),{once:true});
+}
+
+// ==================== ABOUT ====================
 function renderAbout(c){
-  const BUILD='1.0.0';
-  const BUILD_DATE='2026';
+  const BUILD = window._swVersion || '1.1';
+  const BUILD_DATE = new Date().getFullYear();
   c.innerHTML=`
   <div class="about-page view-enter">
     <div class="about-logo">
@@ -4531,31 +4534,43 @@ function renderAbout(c){
 // ==================== INIT ====================
 async function init(){
   await initDB();
-  // Load track metadata only (no audio blobs) for fast startup
-  tracks=await dbGetAllTracksMeta();
-  const storedPlaylists=await dbGetAll('playlists');
+
+  // Load all stores in parallel — was 8 sequential IDB transactions, now 4
+  const [allTracks, storedPlaylists, storedQueues, allSettings] = await Promise.all([
+    dbGetAllTracksMeta(),
+    dbGetAll('playlists'),
+    dbGetAll('savedQueues'),
+    dbGetAll('settings')
+  ]);
+  tracks=allTracks;
   playlists=storedPlaylists;
-  const favs=await getSetting('favorites')||[];
+  savedQueues=storedQueues;
+
+  // Build settings map from array — one getAll instead of 5 separate gets
+  const S={};
+  allSettings.forEach(s=>{S[s.key]=s.value});
+
+  const favs=S['favorites']||[];
   favorites=new Set(favs);
-  volume=await getSetting('volume')||0.8;
+  volume=S['volume']||0.8;
   audio.volume=volume;
   document.getElementById('vol-fill').style.width=(volume*100)+'%';
-  shuffle=await getSetting('shuffle')||0;
-  // Migrate old boolean true → 1
+  shuffle=S['shuffle']||0;
   if(shuffle===true)shuffle=1;
-  repeat=await getSetting('repeat')||0;
+  repeat=S['repeat']||0;
   updateShuffleUI();
 
-  // Resume last track (lazy-load its fileData)
-  const lastTrack=await getSetting('lastTrack');
-  const lastPos=await getSetting('lastPos')||0;
+  // Resume last track (lazy-load its fileData + artData)
+  const lastTrack=S['lastTrack'];
+  const lastPos=S['lastPos']||0;
   if(lastTrack&&tracks.find(t=>t.id===lastTrack)){
     currentTrackId=lastTrack;
     const track=tracks.find(t=>t.id===lastTrack);
-    // Load fileData for last track so it's ready to resume
-    dbGetTrackFileData(lastTrack).then(src=>{
+    // Load fileData and artData for last track so it's ready to resume
+    Promise.all([dbGetTrackFileData(lastTrack),dbGetTrackArtData(lastTrack)]).then(([src,art])=>{
       if(src){
         track.fileData=src;
+        if(art) track.artData=art;
         audio.src=src;
         audio.load();
         audio.currentTime=lastPos;
@@ -4568,9 +4583,41 @@ async function init(){
   updateBadges();
   renderCurrentView();
 
-  // Register SW
+  // Register SW with update detection
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js').then(reg=>{
+      // Check for a new SW on every page load
+      reg.update();
+
+      reg.addEventListener('updatefound',()=>{
+        const newSW=reg.installing;
+        newSW.addEventListener('statechange',()=>{
+          if(newSW.state==='installed'&&navigator.serviceWorker.controller){
+            // A new version is ready — show toast if music is playing, else auto-reload
+            if(audio.paused){
+              window.location.reload();
+            } else {
+              showUpdateToast(newSW);
+            }
+          }
+        });
+      });
+    }).catch(()=>{});
+
+    // Receive version number broadcast from the active SW
+    navigator.serviceWorker.addEventListener('message',e=>{
+      if(e.data&&e.data.type==='SW_VERSION'){
+        // Store it so renderAbout can display it
+        window._swVersion=e.data.version;
+        // Refresh about page if it's currently open
+        if(currentView==='about') renderCurrentView();
+      }
+    });
+
+    // Ask the current SW for its version right away (in case activate already fired)
+    if(navigator.serviceWorker.controller){
+      navigator.serviceWorker.controller.postMessage({type:'SW_GET_VERSION'});
+    }
   }
 
   // ── Wire album art long-press (done here so DOM is guaranteed ready) ──
@@ -4592,7 +4639,13 @@ document.addEventListener('keydown',e=>{
 // ══════════════════════════════════════════
 
 // ── COLOR EXTRACTION ────────────────────
-function extractDominantColor(src, cb){
+// Module-level vars — updated by applyAlbumColor, read by canvas loops (no getComputedStyle per frame)
+let _npR=0,_npG=212,_npB=232;
+// LRU-style cache keyed by track.id (NOT the full artData string) — avoids storing 500KB keys
+const _colorCache=new Map();
+
+function extractDominantColor(trackId, src, cb){
+  if(_colorCache.has(trackId)){const c=_colorCache.get(trackId);cb(c.r,c.g,c.b);return;}
   const img=new Image();
   img.crossOrigin='anonymous';
   img.onload=()=>{
@@ -4614,6 +4667,9 @@ function extractDominantColor(src, cb){
       best.r=Math.min(255,Math.round(best.r*scale));
       best.g=Math.min(255,Math.round(best.g*scale));
       best.b=Math.min(255,Math.round(best.b*scale));
+      // Cap cache size to avoid unbounded memory growth
+      if(_colorCache.size>=200) _colorCache.delete(_colorCache.keys().next().value);
+      _colorCache.set(trackId,{r:best.r,g:best.g,b:best.b});
       cb(best.r,best.g,best.b);
     }catch(e){cb(0,212,232)}
   };
@@ -4622,6 +4678,7 @@ function extractDominantColor(src, cb){
 }
 
 function applyAlbumColor(r,g,b){
+  _npR=r; _npG=g; _npB=b; // keep JS vars in sync — canvas loops read these, not CSS
   const root=document.documentElement;
   root.style.setProperty('--np-r',r);
   root.style.setProperty('--np-g',g);
@@ -4660,32 +4717,31 @@ function startVisRing(){
 }
 function stopVisRing(){
   if(visRingRAF){cancelAnimationFrame(visRingRAF);visRingRAF=null}
-  const canvas=document.getElementById('np-vis-canvas');
-  if(canvas){const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height)}
+  if(_visRingCanvas){const ctx=_visRingCanvas.getContext('2d');ctx.clearRect(0,0,_visRingCanvas.width,_visRingCanvas.height)}
 }
 
+let _visRingCanvas=null; // cached element ref — avoid getElementById at 60fps
 function drawVisRing(){
-  const canvas=document.getElementById('np-vis-canvas');
-  if(!canvas||!analyser){visRingRAF=null;return}
+  if(!_visRingCanvas) _visRingCanvas=document.getElementById('np-vis-canvas');
+  if(!_visRingCanvas||!analyser){visRingRAF=null;return}
 
   // Size canvas to its display size
-  const size=canvas.offsetWidth*window.devicePixelRatio||460;
-  if(canvas.width!==size){canvas.width=size;canvas.height=size}
+  const size=Math.round(_visRingCanvas.offsetWidth*(window.devicePixelRatio||1))||460;
+  if(_visRingCanvas.width!==size){_visRingCanvas.width=size;_visRingCanvas.height=size}
 
-  const ctx=canvas.getContext('2d');
-  const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
+  const ctx=_visRingCanvas.getContext('2d');
+  const W=_visRingCanvas.width,H=_visRingCanvas.height,cx=W/2,cy=H/2;
   ctx.clearRect(0,0,W,H);
 
   analyser.getByteFrequencyData(analyserData);
   const bars=analyserData.length;
-  const r=document.documentElement;
-  const nr=getComputedStyle(r).getPropertyValue('--np-r').trim()||0;
-  const ng=getComputedStyle(r).getPropertyValue('--np-g').trim()||212;
-  const nb=getComputedStyle(r).getPropertyValue('--np-b').trim()||232;
+  // Use module vars set by applyAlbumColor — no getComputedStyle per frame
+  const nr=_npR, ng=_npG, nb=_npB;
 
   // Inner radius = about 48% of canvas width
   const innerR=W*0.34;
   const maxBarH=W*0.14;
+  const useWarmHue=nr>nb;
 
   for(let i=0;i<bars;i++){
     const angle=(i/bars)*Math.PI*2-Math.PI/2;
@@ -4697,7 +4753,7 @@ function drawVisRing(){
     const x2=cx+Math.cos(angle)*(innerR+barLen);
     const y2=cy+Math.sin(angle)*(innerR+barLen);
 
-    const hue=parseInt(nr)>parseInt(nb)?360*(i/bars):188+60*(i/bars);
+    const hue=useWarmHue?360*(i/bars):188+60*(i/bars);
     const alpha=0.3+v*0.7;
     const bright=55+v*45;
     ctx.beginPath();
@@ -4717,10 +4773,7 @@ let particleRAF=null, particleCtx=null;
 const PARTICLES=[];
 
 function spawnParticle(canvas){
-  const r=document.documentElement;
-  const nr=parseInt(getComputedStyle(r).getPropertyValue('--np-r').trim())||0;
-  const ng=parseInt(getComputedStyle(r).getPropertyValue('--np-g').trim())||212;
-  const nb=parseInt(getComputedStyle(r).getPropertyValue('--np-b').trim())||232;
+  // Use module vars set by applyAlbumColor — no getComputedStyle
   PARTICLES.push({
     x:Math.random()*canvas.width,
     y:canvas.height+10,
@@ -4730,7 +4783,7 @@ function spawnParticle(canvas){
     alpha:0.5+Math.random()*0.5,
     life:1,
     decay:0.003+Math.random()*0.005,
-    nr,ng,nb,
+    nr:_npR,ng:_npG,nb:_npB,
     glyph:Math.random()<0.12?['♪','♫','♩','♬'][Math.floor(Math.random()*4)]:null
   });
 }
@@ -4741,9 +4794,11 @@ function drawParticles(){
   if(!particleCtx) particleCtx=canvas.getContext('2d');
 
   const W=canvas.offsetWidth,H=canvas.offsetHeight;
-  if(canvas.width!==W*devicePixelRatio){
-    canvas.width=W*devicePixelRatio; canvas.height=H*devicePixelRatio;
-    particleCtx.scale(devicePixelRatio,devicePixelRatio);
+  const dpr=window.devicePixelRatio||1;
+  const pw=Math.round(W*dpr),ph=Math.round(H*dpr);
+  if(canvas.width!==pw||canvas.height!==ph){
+    canvas.width=pw; canvas.height=ph;
+    particleCtx.scale(dpr,dpr);
   }
   particleCtx.clearRect(0,0,W,H);
 
@@ -4826,13 +4881,13 @@ let _isDraggingQueueItem=false; // set true during touch-drag of queue items
   // Push an initial state so we can intercept the back gesture
   history.pushState({aura:true},'');
   window.addEventListener('popstate',()=>{
+    // If queue sheet is open, close it first (highest z-index)
+    if(document.getElementById('np-panel-queue').classList.contains('open')){
+      closeNpQueuePanel();history.pushState({aura:true},'');return;
+    }
     // If NP overlay is open, close it and re-push state
     if(document.getElementById('now-playing-overlay').classList.contains('open')){
       closeNowPlaying();history.pushState({aura:true},'');return;
-    }
-    // If queue sheet is open, close it and re-push state
-    if(document.getElementById('np-panel-queue').classList.contains('open')){
-      closeNpQueuePanel();history.pushState({aura:true},'');return;
     }
     // If sidebar is open, close it and re-push state
     if(document.getElementById('sidebar').classList.contains('open')){
@@ -4938,7 +4993,7 @@ const _origUpdateUI=updatePlayerUI;
 updatePlayerUI=function(track){
   _origUpdateUI(track);
   if(track.artData){
-    extractDominantColor(track.artData,applyAlbumColor);
+    extractDominantColor(track.id,track.artData,applyAlbumColor);
   } else {
     resetAlbumColor();
   }
