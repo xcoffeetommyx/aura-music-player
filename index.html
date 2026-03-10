@@ -485,6 +485,10 @@ body.is-playing .playing-anim span{
   0%{transform:scaleY(.3);opacity:.6}
   100%{transform:scaleY(1);opacity:1}
 }
+@keyframes spin{
+  from{transform:rotate(0deg)}
+  to{transform:rotate(360deg)}
+}
 .track-art{
   width:52px;height:52px;
   border-radius:10px;
@@ -2409,6 +2413,12 @@ body.theme-pink{
     Queues
   </div>
 
+  <div class="sidebar-section">Remote</div>
+  <div class="nav-item" data-view="server" onclick="navigate('server')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="7" rx="2"/><rect x="2" y="14" width="20" height="7" rx="2"/><line x1="6" y1="7" x2="6.01" y2="7"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+    Server
+    <span class="nav-badge" id="badge-server">—</span>
+  </div>
   <div class="sidebar-section">More</div>
   <div class="nav-item" data-view="settings" onclick="navigate('settings')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -2785,6 +2795,16 @@ let shuffleOrder=[],shufflePos=0;
 let volume=0.8,muted=false;
 let fadeMul=1; // crossfade multiplier (0–1), applied on top of user volume
 let gapless=false;
+
+// ── Aura Server connection state ──────────
+let auraServerUrl='';          // base URL, no trailing slash
+let auraServerStatus='idle';   // 'idle' | 'testing' | 'connected' | 'error'
+let auraServerStatusMsg='';
+// Remote tracks — kept entirely separate from local `tracks` array.
+// Never written to IndexedDB; re-fetched each session after connecting.
+let remoteTracks=[];           // TrackResponse[] from server (sourceType === 'remote')
+let remoteTracksStatus='idle'; // 'idle' | 'loading' | 'ready' | 'error'
+let remoteTracksError='';
 let _gaplessFired=false; // prevents 'ended' from double-advancing during crossfade
 let _pausedByMute=false; // tracks whether WE paused due to mute/zero-vol
 let searchQ='',sortMode='title';
@@ -3187,9 +3207,22 @@ function readFileMeta(file){
 
 // ==================== PLAYBACK ====================
 let _playGen=0; // monotonically incremented; stale async resolves are ignored
+let currentTrackIsRemote=false; // true when the active track came from Aura Server
+
+/** Look up a track by id in local tracks first, then remote tracks.
+ *  FUTURE (Phase 2): when a unified track pool is introduced, this will
+ *  query that single merged collection instead of two separate arrays. */
+function findTrackById(id){
+  return tracks.find(t=>t.id===id) || remoteTracks.find(t=>t.id===id) || null;
+}
+
 async function playTrack(id,resetQueue=false){
-  const track=tracks.find(t=>t.id===id);
-  if(!track)return;
+  // Support both local (numeric) and remote (string UUID) track IDs
+  const track = tracks.find(t=>t.id===id) || remoteTracks.find(t=>t.id===id);
+  if(!track) return;
+
+  const isRemote = track.sourceType==='remote';
+  currentTrackIsRemote = isRemote;
 
   const gen=++_playGen; // snapshot generation for this call
 
@@ -3198,29 +3231,38 @@ async function playTrack(id,resetQueue=false){
   const idx=queue.findIndex(q=>q===id);
   if(idx>=0)queueIndex=idx;
 
-  // Lazy-load fileData if not already in memory (must happen BEFORE dbPut)
-  let src=track.fileData;
-  if(!src){
-    src=await dbGetTrackFileData(id);
-    if(gen!==_playGen) return; // a newer playTrack call won — bail out
-    if(!src){toast('Could not load audio data');return;}
-    track.fileData=src; // cache in memory for this session
-  }
+  let src;
 
-  // Lazy-load artData if not already in memory
-  if(!track.artData){
-    const art=await dbGetTrackArtData(id);
+  if(isRemote){
+    // ── Remote track: use streamUrl directly, no DB access needed ──
+    src=track.streamUrl;
+    if(!src){toast('No stream URL for this track');return;}
+    // No fileData/artData to load — proceed immediately
+  } else {
+    // ── Local track: lazy-load fileData blob from IndexedDB ──
+    src=track.fileData;
+    if(!src){
+      src=await dbGetTrackFileData(id);
+      if(gen!==_playGen) return; // a newer playTrack call won — bail out
+      if(!src){toast('Could not load audio data');return;}
+      track.fileData=src; // cache in memory for this session
+    }
+
+    // Lazy-load artData if not already in memory
+    if(!track.artData){
+      const art=await dbGetTrackArtData(id);
+      if(gen!==_playGen) return;
+      if(art) track.artData=art; // cache in memory for this session
+    }
+
+    // Guard again after any await
     if(gen!==_playGen) return;
-    if(art) track.artData=art; // cache in memory for this session
+
+    // Track play count — update only changed fields so fileData/artData are never wiped
+    track.playCount=(track.playCount||0)+1;
+    track.lastPlayed=Date.now();
+    dbUpdateTrackMeta(id,{playCount:track.playCount,lastPlayed:track.lastPlayed}).catch(()=>{});
   }
-
-  // Guard again after any await
-  if(gen!==_playGen) return;
-
-  // Track play count — update only changed fields so fileData/artData are never wiped
-  track.playCount=(track.playCount||0)+1;
-  track.lastPlayed=Date.now();
-  dbUpdateTrackMeta(id,{playCount:track.playCount,lastPlayed:track.lastPlayed}).catch(()=>{});
 
   // Cancel any in-progress crossfade when user manually picks a track
   if(!_gaplessFired){
@@ -3237,16 +3279,21 @@ async function playTrack(id,resetQueue=false){
   });
   updatePlayerUI(track);
   updateMediaSession(track);
-  saveSetting('lastTrack',id);
-  saveSetting('lastPos',0);
+  // Only persist last-track for local tracks; we can't resume remote streams across sessions
+  if(!isRemote){
+    saveSetting('lastTrack',id);
+    saveSetting('lastPos',0);
+  }
   updatePlayingHighlight(id); // patch .playing class — no full DOM rebuild
   renderNpQueue();
 }
 
 // Patch .playing highlight on visible rows without rebuilding the DOM
 function updatePlayingHighlight(id){
+  // Use string comparison so both numeric local IDs and string remote UUIDs work
+  const idStr=String(id);
   document.querySelectorAll('.track-row[data-id]').forEach(el=>{
-    el.classList.toggle('playing',parseInt(el.dataset.id)===id);
+    el.classList.toggle('playing',el.dataset.id===idStr);
   });
   // Also refresh q-items in the NP queue sheet if open
   document.querySelectorAll('.q-item[data-qi]').forEach(el=>{
@@ -3258,14 +3305,14 @@ function updatePlayingHighlight(id){
 }
 
 function updatePlayerUI(track){
-  document.getElementById('player-title').textContent=track.title;
-  document.getElementById('player-artist').textContent=track.artist;
-  document.getElementById('np-song').textContent=track.title;
-  document.getElementById('np-artist').textContent=track.artist;
-  document.getElementById('np-album').textContent=track.album||'';
+  document.getElementById('player-title').textContent  = track.title  || 'Unknown Title';
+  document.getElementById('player-artist').textContent = track.artist || 'Unknown Artist';
+  document.getElementById('np-song').textContent       = track.title  || 'Unknown Title';
+  document.getElementById('np-artist').textContent     = track.artist || 'Unknown Artist';
+  document.getElementById('np-album').textContent      = track.album  || '';
   // Mini player
-  document.getElementById('mini-title').textContent=track.title;
-  document.getElementById('mini-artist').textContent=track.artist;
+  document.getElementById('mini-title').textContent    = track.title  || 'Unknown Title';
+  document.getElementById('mini-artist').textContent   = track.artist || 'Unknown Artist';
 
   const artImg=document.getElementById('player-art-img');
   const artPh=document.getElementById('player-art-ph');
@@ -3282,6 +3329,13 @@ function updatePlayerUI(track){
     miniImg.src=track.artData;miniImg.style.display='block';miniPh.style.display='none';
     if(glow) glow.style.display='block';
     if(npBgArt) npBgArt.style.backgroundImage=`url(${track.artData})`;
+  } else if(track.artworkUrl){
+    // Remote track with server-hosted artwork URL
+    artImg.src=track.artworkUrl; artImg.style.display='block'; artPh.style.display='none';
+    npImg.src=track.artworkUrl;  npImg.style.display='block';  npPh.style.display='none';
+    miniImg.src=track.artworkUrl;miniImg.style.display='block';miniPh.style.display='none';
+    if(glow) glow.style.display='block';
+    if(npBgArt) npBgArt.style.backgroundImage=`url(${track.artworkUrl})`;
   } else {
     artImg.style.display='none'; artPh.style.display='flex';
     npImg.style.display='none';  npPh.style.display='flex';
@@ -3379,6 +3433,8 @@ function cycleRepeat(){
   const labels=['Repeat off','Repeat all','Repeat one'];
   toast(labels[repeat]);
 }
+// FUTURE (Phase 2): buildQueue will need to handle a unified local+remote pool.
+// For now it only enqueues local tracks; remote queues are set explicitly by playRemoteTrack().
 function buildQueue(){queue=tracks.map(t=>t.id);queueIndex=queue.findIndex(q=>q===currentTrackId);if(shuffle>0)buildShuffleOrder()}
 function buildShuffleOrder(){
   if(shuffle===2){
@@ -3488,7 +3544,8 @@ audio.addEventListener('timeupdate',()=>{
   document.getElementById('np-time-current').textContent=cur;
   if(!_lastPosSaveTimer){
     _lastPosSaveTimer=setTimeout(()=>{
-      saveSetting('lastPos',audio.currentTime);
+      // Don't overwrite lastPos during remote playback — would corrupt local track resume
+      if(!currentTrackIsRemote) saveSetting('lastPos',audio.currentTime);
       _lastPosSaveTimer=null;
     },5000);
   }
@@ -3554,6 +3611,17 @@ audio.addEventListener('ended',()=>{
   _cancelFade();
   playNext();
 });
+audio.addEventListener('error',()=>{
+  // Fires for both load failures and mid-stream drops; .play() catch only covers initial AbortError
+  const err=audio.error;
+  if(!err||!currentTrackId) return;
+  const msgs={1:'Playback aborted',2:'Network error — check your connection',3:'Playback error',4:'Format not supported'};
+  const msg=msgs[err.code]||'Playback error';
+  toast(msg+(currentTrackIsRemote?' — stream unavailable':''));
+  if(currentTrackIsRemote){
+    console.warn('[aura-server] Stream error for',currentTrackId,'MediaError code:',err.code);
+  }
+});
 _applyVolume(); // sync audio.volume on startup
 
 // ==================== VISUALIZER ====================
@@ -3580,8 +3648,11 @@ function stopVisualizer(){
 function updateMediaSession(track){
   if(!('mediaSession' in navigator))return;
   navigator.mediaSession.metadata=new MediaMetadata({
-    title:track.title,artist:track.artist,album:track.album||'',
-    artwork:track.artData?[{src:track.artData}]:[]
+    title:  track.title  || 'Unknown Title',
+    artist: track.artist || 'Unknown Artist',
+    album:  track.album  || '',
+    artwork:track.artData?[{src:track.artData}]:
+            track.artworkUrl?[{src:track.artworkUrl}]:[]
   });
   navigator.mediaSession.setActionHandler('play',()=>audio.play());
   navigator.mediaSession.setActionHandler('pause',()=>audio.pause());
@@ -3666,6 +3737,7 @@ const BNAV_CATALOG = [
   { id:'albums',    label:'Albums',    action:"navigate('albums');bnavSetActive('albums')",         svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>` },
   { id:'artists',   label:'Artists',   action:"navigate('artists');bnavSetActive('artists')",       svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>` },
   { id:'folders',   label:'Folders',   action:"navigate('folders');bnavSetActive('folders')",       svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>` },
+  { id:'server',    label:'Server',    action:"navigate('server');bnavSetActive('server')",           svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="7" rx="2"/><rect x="2" y="14" width="20" height="7" rx="2"/><line x1="6" y1="7" x2="6.01" y2="7"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>` },
 ];
 const BNAV_DEFAULT = ['library','queue','playlists','favorites','search'];
 
@@ -3709,7 +3781,7 @@ function navigate(view,extra){
   document.querySelectorAll('.nav-item').forEach(el=>{
     el.classList.toggle('active',el.dataset.view===view);
   });
-  const titles={library:'Songs',albums:'Albums',artists:'Artists',folders:'Folders',playlists:'Playlists',favorites:'Favorites',savedQueues:'Queues',about:'About',settings:'Settings'};
+  const titles={library:'Songs',albums:'Albums',artists:'Artists',folders:'Folders',playlists:'Playlists',favorites:'Favorites',savedQueues:'Queues',about:'About',settings:'Settings',server:'Server Library'};
   document.getElementById('page-title').textContent=extra||titles[view]||view;
   bnavSetActive(view);
   renderCurrentView();
@@ -3739,6 +3811,8 @@ function renderCurrentView(){
     case'savedQueues':renderSavedQueues(c);break;
     case'about':renderAbout(c);break;
     case'settings':renderSettings(c);break;
+    case'server':renderServerLibrary(c);break;
+    // FUTURE (Phase 2): a 'hybrid' case here will render a merged local+remote library view
     default:if(currentView.startsWith('playlist:')){
       const id=parseInt(currentView.split(':')[1]);
       renderPlaylistDetail(c,id);
@@ -4091,6 +4165,194 @@ function renderArtistDetail(c,artistEnc){
 }
 
 
+
+
+// ==================== SERVER LIBRARY VIEW ====================
+let remoteSort='title'; // 'title' | 'artist' | 'album'
+
+function renderServerLibrary(c){
+  // ── No server configured ──────────────────
+  if(!auraServerUrl){
+    c.innerHTML=`
+    <div class="view-enter" style="max-width:640px;margin:0 auto">
+      <div class="empty-state">
+        <div class="empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="3" width="20" height="7" rx="2"/><rect x="2" y="14" width="20" height="7" rx="2"/><line x1="6" y1="7" x2="6.01" y2="7"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+        </div>
+        <div class="empty-title">No Server Configured</div>
+        <div class="empty-sub">Add an Aura Server URL in Settings to browse your remote library.</div>
+        <button class="empty-btn" onclick="navigate('settings')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Open Settings
+        </button>
+      </div>
+    </div>`;
+    return;
+  }
+
+  // ── Loading state ─────────────────────────
+  if(remoteTracksStatus==='loading'){
+    c.innerHTML=`
+    <div class="view-enter" style="max-width:640px;margin:0 auto">
+      <div class="empty-state">
+        <div class="empty-icon" style="animation:spin 1.4s linear infinite">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12A10 10 0 1 1 12 2"/></svg>
+        </div>
+        <div class="empty-title">Fetching Library…</div>
+        <div class="empty-sub">Connecting to ${escHTML(auraServerUrl)}</div>
+      </div>
+    </div>`;
+    return;
+  }
+
+  // ── Error state ───────────────────────────
+  if(remoteTracksStatus==='error'||auraServerStatus==='error'){
+    const errMsg=remoteTracksStatus==='error'?remoteTracksError:auraServerStatusMsg||'Could not reach server.';
+    c.innerHTML=`
+    <div class="view-enter" style="max-width:640px;margin:0 auto">
+      <div class="empty-state">
+        <div class="empty-icon" style="color:var(--red)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div class="empty-title" style="color:var(--red)">Connection Error</div>
+        <div class="empty-sub">${escHTML(errMsg)}</div>
+        <button class="empty-btn" onclick="connectAndFetch().then(()=>renderCurrentView())">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M22 12A10 10 0 1 1 12 2"/><polyline points="22 2 22 8 16 8"/></svg>
+          Retry
+        </button>
+      </div>
+    </div>`;
+    return;
+  }
+
+  // ── Not yet fetched but server is configured ──
+  if(remoteTracksStatus==='idle'){
+    c.innerHTML=`
+    <div class="view-enter" style="max-width:640px;margin:0 auto">
+      <div class="empty-state">
+        <div class="empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="3" width="20" height="7" rx="2"/><rect x="2" y="14" width="20" height="7" rx="2"/><line x1="6" y1="7" x2="6.01" y2="7"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+        </div>
+        <div class="empty-title">Server Library</div>
+        <div class="empty-sub">${escHTML(auraServerUrl)}</div>
+        <button class="empty-btn" onclick="connectAndFetch().then(()=>renderCurrentView())">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          Connect
+        </button>
+      </div>
+    </div>`;
+    return;
+  }
+
+  // ── Ready — render track list ─────────────
+  const q=searchQ.toLowerCase();
+  let filtered=remoteTracks.filter(t=>
+    !q||(
+      (t.title||'').toLowerCase().includes(q)||
+      (t.artist||'').toLowerCase().includes(q)||
+      (t.album||'').toLowerCase().includes(q)
+    )
+  );
+
+  const sorted=[...filtered];
+  if(remoteSort==='title')  sorted.sort((a,b)=>_coll.compare(a.title||'',b.title||''));
+  else if(remoteSort==='artist') sorted.sort((a,b)=>_coll.compare(a.artist||'',b.artist||''));
+  else if(remoteSort==='album')  sorted.sort((a,b)=>_coll.compare(a.album||'',b.album||''));
+
+  const listIds=JSON.stringify(sorted.map(t=>t.id));
+
+  // Derive the display hostname from the URL for the header pill
+  let serverHost=auraServerUrl;
+  try{serverHost=new URL(auraServerUrl).host;}catch(_){}
+
+  const totalDur=remoteTracks.reduce((s,t)=>s+(t.duration||0),0);
+
+  c.innerHTML=`
+  <div class="view-enter" style="max-width:640px;margin:0 auto">
+
+    <!-- Server info chips -->
+    <div class="stat-chips stagger">
+      <div class="stat-chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="7" rx="2"/><rect x="2" y="14" width="20" height="7" rx="2"/><line x1="6" y1="7" x2="6.01" y2="7"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+        <strong>${escHTML(serverHost)}</strong>
+      </div>
+      <div class="stat-chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <strong>${remoteTracks.length}</strong> Tracks
+      </div>
+      <div class="stat-chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <strong>${formatTime(totalDur)}</strong>
+      </div>
+    </div>
+
+    <!-- Sort + Refresh bar -->
+    <div class="sort-bar">
+      <span class="sort-label">Sort:</span>
+      <button class="sort-btn ${remoteSort==='title'?'active':''}"  onclick="remoteSort='title'; renderCurrentView()">Title</button>
+      <button class="sort-btn ${remoteSort==='artist'?'active':''}" onclick="remoteSort='artist';renderCurrentView()">Artist</button>
+      <button class="sort-btn ${remoteSort==='album'?'active':''}"  onclick="remoteSort='album'; renderCurrentView()">Album</button>
+      <div class="section-actions" style="margin-left:auto">
+        <button class="btn-sm ghost" onclick="connectAndFetch().then(()=>{updateBadges();renderCurrentView()})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12A10 10 0 1 1 12 2"/><polyline points="22 2 22 8 16 8"/></svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- Track list -->
+    ${sorted.length===0
+      ? `<div style="text-align:center;padding:48px 20px;color:var(--text-muted);font-size:14px">
+           ${q?`No remote tracks match "${escHTML(q)}"`:
+              'No tracks on server.'}
+         </div>`
+      : `<div class="track-list stagger">${sorted.map((t,i)=>remoteTrackRowHTML(t,i,listIds)).join('')}</div>`
+    }
+  </div>`;
+}
+
+/**
+ * Track row renderer for remote library items.
+ *
+ * Differences from trackRowHTML (local tracks):
+ *   - artwork: uses track.artworkUrl (URL) instead of track.artData (blob)
+ *   - no context menu / long-press (not wired for remote tracks in Phase 1)
+ *   - no favourite button (FUTURE Phase 2: remote favourite sync)
+ *   - playback: delegates to playRemoteTrack → playTrack via streamUrl
+ */
+function remoteTrackRowHTML(track, idx, listIds){
+  const isPlaying = track.id===currentTrackId;
+  const artSrc    = track.artworkUrl||null;
+
+  return `<div class="track-row ${isPlaying?'playing':''}" data-id="${escHTML(track.id)}"
+    onclick="playRemoteTrack(${JSON.stringify(track.id)},${listIds})"
+    title="${escHTML(track.title||'Unknown')} — click to play">
+    <div class="track-art">
+      ${artSrc
+        ? `<img src="${escHTML(artSrc)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'track-art-placeholder\\'><svg viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.5\\'><path d=\\'M9 18V5l12-2v13\\'/><circle cx=\\'6\\' cy=\\'18\\' r=\\'3\\'/><circle cx=\\'18\\' cy=\\'16\\' r=\\'3\\'/></svg></div>'">`
+        : `<div class="track-art-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>`
+      }
+      <div class="playing-anim"><span></span><span></span><span></span><span></span></div>
+    </div>
+    <div class="track-info">
+      <div class="track-title">${escHTML(track.title||'Unknown Title')}</div>
+      <div class="track-meta">${escHTML(track.artist||'Unknown Artist')}${track.album?' · '+escHTML(track.album):''}</div>
+    </div>
+    <span class="track-dur">${formatTime(track.duration||0)}</span>
+  </div>`;
+}
+
+function playRemoteTrack(id, listIds){
+  // listIds is a JSON-serialised array of remote track ID strings passed
+  // from remoteTrackRowHTML at render time; parse it back for the queue.
+  const ids = typeof listIds==='string' ? JSON.parse(listIds) : listIds;
+  queue = ids;
+  queueIndex = ids.findIndex(q=>q===id);
+  if(queueIndex<0) queueIndex=0;
+  if(shuffle>0) buildShuffleOrder();
+  playTrack(id);
+}
+
 // ==================== TRACK ROW HTML ====================
 // listOrIds: either a pre-serialized JSON string of IDs (fast path) or an array (fallback)
 function trackRowHTML(track,num,listOrIds,context=''){
@@ -4206,6 +4468,11 @@ async function ctxAction(action){
   else if(action==='fav'){toggleFavorite(ctxTrackId)}
   else if(action==='playlist'){showAddToPlaylistMenu()}
   else if(action==='remove'){
+    // Guard: remote tracks don't live in the local IDB library
+    if(remoteTracks.some(t=>t.id===ctxTrackId)){
+      toast('Remote tracks cannot be removed from local library');
+      return;
+    }
     tracks=tracks.filter(t=>t.id!==ctxTrackId);
     await dbDelete('tracks',ctxTrackId);
     if(currentTrackId===ctxTrackId){audio.pause();currentTrackId=null}
@@ -4478,6 +4745,10 @@ function updateBadges(){
   document.getElementById('badge-artists').textContent=new Set(tracks.map(t=>t.artist)).size;
   document.getElementById('badge-playlists').textContent=playlists.length;
   document.getElementById('badge-favs').textContent=favorites.size;
+  const sb=document.getElementById('badge-server');
+  if(sb) sb.textContent=remoteTracksStatus==='ready'?remoteTracks.length:
+                         remoteTracksStatus==='loading'?'…':
+                         auraServerUrl?'–':'—';
 }
 let _searchTimer=null;
 function onSearch(q){
@@ -4604,15 +4875,15 @@ function renderNpQueue(){
     return;
   }
   el.innerHTML=queue.map((id,i)=>{
-    const t=tracks.find(tr=>tr.id===id);
+    const t=findTrackById(id);
     if(!t)return'';
     const isPlaying=id===currentTrackId;
     return`<div class="q-item ${isPlaying?'playing':''}" data-qi="${i}"
-      onclick="queueIndex=${i};playTrack(${id});closeNpQueuePanel();switchNpTab('player')">
+      onclick="queueIndex=${i};playTrack(queue[${i}]);closeNpQueuePanel();switchNpTab('player')">
       <div class="q-drag-handle" onclick="event.stopPropagation()" title="Drag to reorder">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/></svg>
       </div>
-      <div class="q-art">${t.artData?`<img src="${t.artData}" alt="">`:`<div class="q-art-ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>`}</div>
+      <div class="q-art">${t.artData?`<img src="${t.artData}" alt="">`:t.artworkUrl?`<img src="${escHTML(t.artworkUrl)}" alt="" loading="lazy">`:`<div class="q-art-ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>`}</div>
       <div class="q-info">
         <div class="q-title ${isPlaying?'playing':''}">${escHTML(t.title)}</div>
         <div class="q-artist">${escHTML(t.artist)}</div>
@@ -4639,13 +4910,14 @@ function renderNpQueue(){
 // ==================== LYRICS ====================
 function renderLyrics(){
   if(!currentTrackId) return;
-  const track=tracks.find(t=>t.id===currentTrackId);
+  const track = findTrackById(currentTrackId);
   if(!track) return;
   const lyricsText=document.getElementById('lyrics-text');
   const lyricsEmpty=document.getElementById('lyrics-empty');
   const editor=document.getElementById('lyrics-editor');
   editor.style.display='none';
-  document.getElementById('lyrics-edit-btn').style.display='flex';
+  // Hide edit button for remote tracks — lyrics are read-only (Phase 1)
+  document.getElementById('lyrics-edit-btn').style.display=track.sourceType==='remote'?'none':'flex';
   if(track.lyrics && track.lyrics.trim()){
     lyricsEmpty.style.display='none';
     lyricsText.style.display='block';
@@ -4662,6 +4934,7 @@ function renderLyrics(){
 function editLyrics(){
   if(!currentTrackId){toast('No track selected');return;}
   const track=tracks.find(t=>t.id===currentTrackId);
+  if(!track){toast('Remote tracks cannot be edited');return;}
   const ta=document.getElementById('lyrics-textarea');
   ta.value=track.lyrics||'';
   document.getElementById('lyrics-editor').style.display='flex';
@@ -4786,8 +5059,13 @@ async function handleArtChange(file){
 function editTrackField(field){
   if(!currentTrackId){toast('No track selected');return;}
   const track=tracks.find(t=>t.id===currentTrackId);
-  const labels={title:'Track Title',artist:'Artist',album:'Album'};
+  if(!track){
+    // Remote tracks are read-only in Phase 1
+    toast('Remote tracks cannot be edited');
+    return;
+  }
   const current={title:track.title,artist:track.artist,album:track.album};
+  const labels={title:'Track Title',artist:'Artist',album:'Album'};
 
   // Build inline overlay
   const overlay=document.createElement('div');
@@ -4912,7 +5190,7 @@ function renderAbout(c){
     <div class="about-features" style="width:100%">
       <div class="about-features-title">Features</div>
       <div class="about-feature-list stagger">
-        ${['Local music playback — all formats','Embedded metadata & cover art','Lyrics — from tags or manual entry','Playlists, Queues & Favorites','Folder browser','Resume & background play','Lock screen / Media Session','PWA — installable on any device'].map(f=>`
+        ${['Local music playback — all formats','Embedded metadata & cover art','Lyrics — from tags or manual entry','Playlists, Queues & Favorites','Folder browser','Resume & background play','Lock screen / Media Session','PWA — installable on any device','Aura Server — remote library streaming'].map(f=>`
         <div class="about-feature">
           <div class="about-feature-dot"></div>
           <span>${f}</span>
@@ -4952,6 +5230,356 @@ function applyTheme(id){
   localStorage.setItem('aura_theme',id);
   document.body.classList.remove('theme-green','theme-yellow','theme-pink');
   if(id!=='cyan') document.body.classList.add('theme-'+id);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  AURA SERVER INTEGRATION — Phase 1  (Steps 1–5)
+//
+//  What this implements:
+//    · Store / persist a server base URL (IndexedDB settings store)
+//    · Health-check connection:  GET /health  → { ok: true }
+//    · Fetch remote track list:  GET /library/tracks  → TrackResponse[]
+//    · Display remote tracks in a dedicated "Server Library" view
+//    · Stream remote tracks via track.streamUrl using the HTML audio element
+//
+//  How to use:
+//    1. Open Settings → scroll to "Aura Server"
+//    2. Enter your server base URL (e.g. http://192.168.1.10:3000)
+//    3. Tap "Save & Connect" — health check + track fetch run automatically
+//    4. Navigate to "Server" in the sidebar to browse remote tracks
+//    5. Tap any track row to stream it immediately
+//
+//  Data flow:
+//    auraServerUrl  ──►  /health  ──►  auraServerStatus='connected'
+//                   ──►  /library/tracks  ──►  remoteTracks[]
+//    playRemoteTrack(id)  ──►  playTrack(id)  ──►  audio.src = streamUrl
+//
+//  Separation from local library:
+//    · remoteTracks[] is NEVER merged into tracks[] (the local array)
+//    · remoteTracks[] is NEVER written to IndexedDB
+//    · Local playback (fileData blobs) is completely unaffected
+//    · findTrackById() is the single lookup point for both pools
+//
+//  FUTURE — Phase 2 hybrid library (not in Phase 1):
+//    · Merge local + remote into a unified track pool
+//    · Sync playlists, favorites, and play history with the server
+//    · Offline caching / download of remote tracks
+//    · Server-side authentication
+//    · LAN auto-discovery
+// ══════════════════════════════════════════════════════════════
+
+function renderAuraServerSection(){
+  const connected = auraServerStatus==='connected';
+  const hasError   = auraServerStatus==='error';
+
+  const statusColor = connected
+    ? 'var(--accent3)'
+    : hasError
+      ? 'var(--red)'
+      : 'var(--text-muted)';
+
+  const statusDot = connected
+    ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent3);box-shadow:0 0 6px var(--accent3);margin-right:5px;flex-shrink:0"></span>`
+    : hasError
+      ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--red);margin-right:5px;flex-shrink:0"></span>`
+      : `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.2);margin-right:5px;flex-shrink:0"></span>`;
+
+  const statusText = auraServerStatusMsg || (
+    auraServerStatus==='connected' ? 'Connected' :
+    auraServerStatus==='error'     ? 'Connection failed' :
+    auraServerUrl                  ? 'Not tested' : 'No server configured'
+  );
+
+  return `
+    <div class="settings-section-title">Aura Server</div>
+    <div class="settings-card">
+      <!-- URL row -->
+      <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:10px;padding:14px 16px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="settings-row-icon" style="flex-shrink:0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          </div>
+          <div>
+            <div class="settings-row-label">Server URL</div>
+            <div class="settings-row-sub">e.g. http://192.168.1.10:3000</div>
+          </div>
+        </div>
+        <input id="aura-server-url-input" type="url"
+          placeholder="http://hostname:3000"
+          value="${auraServerUrl.replace(/"/g,'&quot;')}"
+          style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(0,212,232,0.2);
+                 border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;
+                 font-family:'Outfit',sans-serif;outline:none;transition:border-color .2s"
+          onfocus="this.style.borderColor='var(--accent)'"
+          onblur="this.style.borderColor='rgba(0,212,232,0.2)'">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-sm primary" style="flex:1;justify-content:center" onclick="saveAndTestAuraServer()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            Save &amp; Connect
+          </button>
+          <button class="btn-sm ghost" style="flex-shrink:0" onclick="testAuraServerConnection()" ${auraServerUrl?'':'disabled style="opacity:.45;pointer-events:none"'}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12A10 10 0 1 1 12 2"/><polyline points="22 2 22 8 16 8"/></svg>
+            Re-test
+          </button>
+          <button class="btn-sm ghost" style="flex-shrink:0;border-color:rgba(255,78,106,0.25);color:var(--red)" onclick="clearAuraServer()" ${auraServerUrl?'':'disabled style="opacity:.45;pointer-events:none"'}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Disconnect
+          </button>
+        </div>
+      </div>
+      <!-- Status rows -->
+      <div style="border-top:1px solid rgba(0,212,232,0.08);padding:10px 16px;
+                  display:flex;align-items:center;font-size:12px;color:${statusColor}">
+        ${statusDot}
+        <span id="aura-server-status-text">${statusText}</span>
+      </div>
+      ${(auraServerStatus==='connected'||remoteTracksStatus==='loading'||remoteTracksStatus==='ready'||remoteTracksStatus==='error')?`
+      <div style="border-top:1px solid rgba(0,212,232,0.06);padding:8px 16px;
+                  display:flex;align-items:center;justify-content:space-between;font-size:11px">
+        <span style="color:${
+          remoteTracksStatus==='ready'  ? 'var(--text-dim)'  :
+          remoteTracksStatus==='error'  ? 'var(--red)'       :
+          remoteTracksStatus==='loading'? 'var(--accent)'    : 'var(--text-muted)'}">
+          ${remoteTracksStatus==='ready'   ? `&#x266B;&nbsp;${remoteTracks.length} remote track${remoteTracks.length===1?'':'s'} loaded` :
+            remoteTracksStatus==='loading' ? 'Fetching remote library…' :
+            remoteTracksStatus==='error'   ? `Library fetch failed: ${remoteTracksError}` :
+            'Remote library not loaded'}
+        </span>
+        ${auraServerStatus==='connected'?`
+        <button class="btn-sm ghost" style="font-size:10px;padding:4px 10px;border-radius:12px"
+          onclick="fetchRemoteTracks().then(()=>renderSettings(document.getElementById('content')))">
+          Refresh
+        </button>`:''}
+      </div>`:''}
+    </div>
+  `;
+}
+
+async function saveAndTestAuraServer(){
+  const input=document.getElementById('aura-server-url-input');
+  if(!input) return;
+  let url=input.value.trim().replace(/\/+$/,'');
+  if(!url){
+    auraServerStatus='error';
+    auraServerStatusMsg='Please enter a server URL.';
+    _refreshServerStatus();
+    return;
+  }
+  // Auto-prepend http:// if user omitted the protocol (e.g. typed "192.168.1.10:3000")
+  if(!/^https?:\/\//i.test(url)){
+    url='http://'+url;
+    if(input) input.value=url; // reflect in the field so the user sees what was saved
+  }
+  auraServerUrl=url;
+  await saveSetting('auraServerUrl', url);
+  await connectAndFetch();
+}
+
+async function testAuraServerConnection(){
+  if(!auraServerUrl){return;}
+  _setServerStatus('testing','Testing connection…');
+  try{
+    const res=await fetch(`${auraServerUrl}/health`,{method:'GET',signal:AbortSignal.timeout(7000)});
+    if(res.ok){
+      const data=await res.json().catch(()=>({}));
+      if(data&&data.ok===true){
+        _setServerStatus('connected',`Connected — ${auraServerUrl}`);
+      } else {
+        _setServerStatus('error',`Unexpected response from server`);
+      }
+    } else {
+      _setServerStatus('error',`Server returned ${res.status} ${res.statusText}`);
+    }
+  }catch(e){
+    const msg=e&&e.name==='TimeoutError'?'Connection timed out':
+              e&&e.message?e.message:'Could not reach server';
+    _setServerStatus('error', msg);
+  }
+}
+
+async function clearAuraServer(){
+  // If a remote track is currently playing, stop it cleanly before clearing state
+  if(currentTrackIsRemote && currentTrackId){
+    audio.pause();
+    audio.src='';
+    currentTrackId=null;
+    currentTrackIsRemote=false;
+    // Reset all player UI elements to idle state
+    document.getElementById('player-title').textContent='Nothing playing';
+    document.getElementById('player-artist').textContent='Select a song to start';
+    document.getElementById('mini-title').textContent='Nothing playing';
+    document.getElementById('mini-artist').textContent='Tap + to add music';
+    // Reset artwork in all three locations: mini player, player bar, NP overlay
+    ['player-art-img','np-art-img','mini-art-img'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.style.display='none';
+    });
+    ['player-art-ph','np-art-ph','mini-art-ph'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.style.display='flex';
+    });
+    const glow=document.getElementById('player-art-glow');
+    if(glow) glow.style.display='none';
+    const bgArt=document.getElementById('np-bg-art');
+    if(bgArt) bgArt.style.backgroundImage='none';
+    // Clear the NP overlay song/artist text too
+    document.getElementById('np-song').textContent='Aura Music Player';
+    document.getElementById('np-artist').textContent='Select a track';
+    document.getElementById('np-album').textContent='';
+  }
+  // Clear the remote queue so playNext/playPrev can't reach stale remote IDs
+  if(queue.some(id=>remoteTracks.some(t=>t.id===id))){
+    queue=[];
+    queueIndex=-1;
+  }
+  auraServerUrl='';
+  auraServerStatus='idle';
+  auraServerStatusMsg='';
+  remoteTracks=[];
+  remoteTracksStatus='idle';
+  remoteTracksError='';
+  await saveSetting('auraServerUrl','');
+  updateBadges();
+  renderSettings(document.getElementById('content'));
+}
+
+function _setServerStatus(status, msg){
+  auraServerStatus=status;
+  auraServerStatusMsg=msg;
+  _refreshServerStatus();
+}
+
+function _refreshServerStatus(){
+  // Re-render the full settings view to reflect new state
+  const c=document.getElementById('content');
+  if(c&&currentView==='settings') renderSettings(c);
+}
+
+// ── Remote track fetching ─────────────────
+/**
+ * Fetch the full track list from Aura Server.
+ * Results are stored in `remoteTracks` (separate from local `tracks`).
+ * Safe to call multiple times; previous results are replaced on success.
+ * Returns { ok: true, count } on success or { ok: false, error } on failure.
+ */
+let _remoteTracksFetching=false; // concurrent fetch guard
+
+async function fetchRemoteTracks(){
+  if(!auraServerUrl){
+    remoteTracksStatus='error';
+    remoteTracksError='No server URL configured.';
+    return {ok:false,error:remoteTracksError};
+  }
+
+  // Prevent overlapping fetches from rapid button taps
+  if(_remoteTracksFetching){
+    console.info('[aura-server] fetchRemoteTracks: already in flight, skipping');
+    return {ok:false,error:'Fetch already in progress'};
+  }
+  _remoteTracksFetching=true;
+
+  // Remember previous data so we can restore it if a refresh fails
+  const prevTracks=remoteTracks.length>0?[...remoteTracks]:null;
+
+  remoteTracksStatus='loading';
+  remoteTracksError='';
+
+  try{
+    const res=await fetch(`${auraServerUrl}/library/tracks`,{
+      method:'GET',
+      headers:{'Accept':'application/json'},
+      signal:AbortSignal.timeout(30000)
+    });
+
+    if(!res.ok){
+      throw new Error(`Server returned ${res.status} ${res.statusText}`);
+    }
+
+    const raw=await res.json();
+
+    if(!Array.isArray(raw)){
+      throw new Error('Unexpected response format: expected an array.');
+    }
+
+    // Validate and normalise each item defensively.
+    // Only accept objects that have at minimum an id and streamUrl.
+    const parsed=[];
+    for(const item of raw){
+      if(!item||typeof item!=='object')continue;
+      if(typeof item.id!=='string'||!item.id)continue;
+      if(typeof item.streamUrl!=='string'||!item.streamUrl)continue;
+
+      parsed.push({
+        // identity
+        id:          item.id,
+        sourceType:  'remote',           // always override to 'remote'
+        // display metadata
+        title:       item.title    ||null,
+        artist:      item.artist   ||null,
+        album:       item.album    ||null,
+        albumArtist: item.albumArtist||null,
+        genre:       item.genre    ||null,
+        year:        item.year     ??null,
+        duration:    item.duration ??null,  // seconds (float)
+        trackNum:    item.trackNum ??null,
+        diskNum:     item.diskNum  ??null,
+        comment:     item.comment  ||null,
+        lyrics:      item.lyrics   ||null,
+        playCount:   item.playCount??null,
+        lastPlayed:  item.lastPlayed||null,
+        folder:      item.folder   ||null,
+        // URLs — used directly, no local blob needed
+        artworkUrl:  item.artworkUrl||null,
+        streamUrl:   item.streamUrl,
+        // explicitly null — remote tracks have no local blob data
+        fileData:    null,
+        artData:     null,
+      });
+    }
+
+    remoteTracks=parsed;
+    remoteTracksStatus='ready';
+    remoteTracksError='';
+    _remoteTracksFetching=false;
+    console.info(`[aura-server] fetchRemoteTracks: loaded ${parsed.length} tracks`);
+    // Update sidebar badge and refresh server view if currently active
+    updateBadges();
+    if(currentView==='server') renderCurrentView();
+    return {ok:true,count:parsed.length};
+
+  }catch(e){
+    const msg=e&&e.name==='TimeoutError'?'Request timed out (30 s)':
+              e&&e.message?e.message:'Unknown fetch error';
+    _remoteTracksFetching=false;
+
+    if(prevTracks){
+      // Keep stale data on a failed refresh so the user doesn't lose their library
+      remoteTracks=prevTracks;
+      remoteTracksStatus='ready';
+      remoteTracksError='';
+      toast('Refresh failed — showing previous library');
+    } else {
+      // First-load failure: nothing to restore
+      remoteTracks=[];
+      remoteTracksStatus='error';
+      remoteTracksError=msg;
+    }
+    console.warn('[aura-server] fetchRemoteTracks failed:',msg);
+    updateBadges();
+    if(currentView==='server') renderCurrentView();
+    return {ok:false,error:msg};
+  }
+}
+
+/**
+ * Convenience: connect (health check) and, if healthy, immediately fetch tracks.
+ * Used by the Save & Connect button so one tap does both.
+ */
+async function connectAndFetch(){
+  await testAuraServerConnection();
+  if(auraServerStatus==='connected'){
+    await fetchRemoteTracks();
+  }
 }
 
 // ── Settings sub-view: 'main' | 'nav' ────────────
@@ -5035,6 +5663,8 @@ function renderSettings(c){
         </div>
       </div>
     </div>
+
+    ${renderAuraServerSection()}
 
     <div class="settings-section-title">App Info</div>
     <div class="settings-card">
@@ -5243,6 +5873,12 @@ async function init(){
   if(shuffle===true)shuffle=1;
   repeat=S['repeat']||0;
   gapless=S['gapless']||false;
+  auraServerUrl=S['auraServerUrl']||'';
+  // If a server URL was saved, reconnect and fetch tracks silently in background.
+  // Failures are non-fatal — local library is unaffected.
+  if(auraServerUrl){
+    connectAndFetch().catch(()=>{});
+  }
   updateShuffleUI();
 
   // Resume last track (lazy-load its fileData + artData)
