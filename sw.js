@@ -3,9 +3,9 @@
 //  Change VERSION whenever you deploy new files.
 //  That's the only line you ever need to edit.
 // ─────────────────────────────────────────────
-const VERSION    = '2.0';
+const VERSION    = '2.1';
 const CACHE_NAME = 'aura-v' + VERSION;
-const ASSETS     = ['./index.html', './manifest.json'];
+const ASSETS     = ['./index.html', './manifest.json', './sw.js'];
 
 // ── INSTALL: pre-cache core assets ───────────
 self.addEventListener('install', e => {
@@ -61,7 +61,12 @@ self.addEventListener('fetch', e => {
   );
 });
 
-// ── MESSAGE: allow page to request skipWaiting ─
+// ── MESSAGE: allow page to request skipWaiting or query version ─
 self.addEventListener('message', e => {
-  if (e.data && e.data.type === 'SW_SKIP_WAITING') self.skipWaiting();
+  if (!e.data) return;
+  if (e.data.type === 'SW_SKIP_WAITING') self.skipWaiting();
+  // Reply to version queries so the About page always shows the right version
+  if (e.data.type === 'SW_GET_VERSION' && e.source) {
+    e.source.postMessage({ type: 'SW_VERSION', version: VERSION });
+  }
 });

@@ -3585,6 +3585,8 @@ audio.addEventListener('loadedmetadata',()=>{
     fadeMul=0;_applyVolume();
     _fadeInStart=0; // non-null signals timeupdate to handle the ramp
   }
+  // Give the Android lock screen a valid duration for its scrubber
+  _syncMediaSessionState();
 });
 audio.addEventListener('play',()=>{
   const pauseIcon=`<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>`;
@@ -3595,6 +3597,9 @@ audio.addEventListener('play',()=>{
   setVinylSpin(true);
   startVisualizer();
   if(document.getElementById('now-playing-overlay').classList.contains('open')) startParticles();
+  // Sync Android lock screen state
+  if('mediaSession' in navigator) navigator.mediaSession.playbackState='playing';
+  _syncMediaSessionState();
 });
 audio.addEventListener('pause',()=>{
   const playIcon=`<polygon points="5 3 19 12 5 21 5 3"/>`;
@@ -3605,10 +3610,13 @@ audio.addEventListener('pause',()=>{
   setVinylSpin(false);
   stopVisualizer();
   stopParticles();
+  // Sync Android lock screen state
+  if('mediaSession' in navigator) navigator.mediaSession.playbackState='paused';
 });
 audio.addEventListener('ended',()=>{
   if(_gaplessFired){_gaplessFired=false;return;} // gapless already called playNext
   _cancelFade();
+  if('mediaSession' in navigator) navigator.mediaSession.playbackState='paused';
   playNext();
 });
 audio.addEventListener('error',()=>{
@@ -3645,20 +3653,56 @@ function stopVisualizer(){
 }
 
 // ==================== MEDIA SESSION ====================
+
+// Sync playbackState + setPositionState with real audio state.
+// Called from audio events so we never rely on a polling timer.
+function _syncMediaSessionState(){
+  if(!('mediaSession' in navigator))return;
+  navigator.mediaSession.playbackState=audio.paused?'paused':'playing';
+  if(audio.duration&&isFinite(audio.duration)&&navigator.mediaSession.setPositionState){
+    try{
+      navigator.mediaSession.setPositionState({
+        duration:   audio.duration,
+        playbackRate: audio.playbackRate||1,
+        position:   Math.min(audio.currentTime,audio.duration)
+      });
+    }catch(_){}
+  }
+}
+
 function updateMediaSession(track){
   if(!('mediaSession' in navigator))return;
+  // Single artwork entry with a size hint — Android uses the first matching entry.
+  // type is omitted (optional per spec); the browser sniffs from the data or Content-Type.
+  const artSrc=track.artData||track.artworkUrl||null;
+  const artwork=artSrc?[{src:artSrc,sizes:'512x512'}]:[];
   navigator.mediaSession.metadata=new MediaMetadata({
     title:  track.title  || 'Unknown Title',
     artist: track.artist || 'Unknown Artist',
     album:  track.album  || '',
-    artwork:track.artData?[{src:track.artData}]:
-            track.artworkUrl?[{src:track.artworkUrl}]:[]
+    artwork
   });
-  navigator.mediaSession.setActionHandler('play',()=>audio.play());
+  // Core transport controls
+  navigator.mediaSession.setActionHandler('play', ()=>audio.play().catch(()=>{}));
   navigator.mediaSession.setActionHandler('pause',()=>audio.pause());
-  navigator.mediaSession.setActionHandler('nexttrack',playNext);
+  navigator.mediaSession.setActionHandler('nexttrack',    playNext);
   navigator.mediaSession.setActionHandler('previoustrack',playPrev);
-  navigator.mediaSession.setActionHandler('seekto',e=>{if(audio.duration)audio.currentTime=e.seekTime});
+  navigator.mediaSession.setActionHandler('seekto',e=>{
+    if(audio.duration&&e.seekTime!=null)audio.currentTime=e.seekTime;
+  });
+  // Seek ±10 s — wrap in try/catch; not supported on all browsers/versions
+  try{
+    navigator.mediaSession.setActionHandler('seekbackward',e=>{
+      audio.currentTime=Math.max(0,audio.currentTime-(e.seekOffset||10));
+    });
+  }catch(_){}
+  try{
+    navigator.mediaSession.setActionHandler('seekforward',e=>{
+      audio.currentTime=Math.min(audio.duration||Infinity,audio.currentTime+(e.seekOffset||10));
+    });
+  }catch(_){}
+  // Sync state immediately after updating metadata
+  _syncMediaSessionState();
 }
 
 // ==================== FAVORITES ====================
@@ -4324,8 +4368,16 @@ function remoteTrackRowHTML(track, idx, listIds){
   const isPlaying = track.id===currentTrackId;
   const artSrc    = track.artworkUrl||null;
 
+  // NOTE on quoting: track.id is a UUID (only [0-9a-f-]) so single-quoting it in the
+  // onclick attribute is safe. listIds is a JSON array of UUID strings — it contains
+  // double-quotes internally, so it MUST live in a data attribute (where escHTML converts
+  // " to &quot;) rather than being inlined directly into the onclick="..." value.
+  // Inlining JSON.stringify(id) or the raw listIds array broke the double-quoted attribute,
+  // causing the browser to truncate the handler to "playRemoteTrack(" and throw
+  // "Uncaught SyntaxError: Unexpected end of input".
   return `<div class="track-row ${isPlaying?'playing':''}" data-id="${escHTML(track.id)}"
-    onclick="playRemoteTrack(${JSON.stringify(track.id)},${listIds})"
+    data-list-ids="${escHTML(listIds)}"
+    onclick="playRemoteTrack('${track.id}', this.dataset.listIds)"
     title="${escHTML(track.title||'Unknown')} — click to play">
     <div class="track-art">
       ${artSrc
@@ -5202,6 +5254,30 @@ function renderAbout(c){
       © ${BUILD_DATE} Tommy Thomas<br>
       Aura Music Player — All rights reserved
     </div>
+
+    ${/android/i.test(navigator.userAgent)?`
+    <div style="
+      margin-top:18px;width:100%;
+      background:rgba(0,212,232,0.05);
+      border:1px solid rgba(0,212,232,0.15);
+      border-radius:14px;padding:16px 18px;
+      display:flex;gap:14px;align-items:flex-start;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#00d4e8" stroke-width="2"
+           style="width:20px;height:20px;flex-shrink:0;margin-top:2px;filter:drop-shadow(0 0 4px rgba(0,212,232,0.5))">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--accent2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">
+          Android tips for uninterrupted playback
+        </div>
+        <div style="font-size:12px;color:var(--text-dim);line-height:1.65">
+          • <b style="color:var(--text)">Install Aura</b> as an app (browser menu → <i>Add to Home Screen</i>) — installed PWAs get higher audio priority.<br>
+          • In Android Settings → Apps → Aura → Battery, set usage to <b style="color:var(--text)">Unrestricted</b> so the system never suspends playback.<br>
+          • Avoid aggressive battery-saver modes while listening — they can silence background audio.
+        </div>
+      </div>
+    </div>`:''}
   </div>`;
 }
 
@@ -5956,6 +6032,52 @@ document.addEventListener('keydown',e=>{
   if(e.code==='KeyF'&&(e.ctrlKey||e.metaKey)){e.preventDefault();document.getElementById('search').focus()}
   if(e.code==='Escape'){closeNowPlaying();closeModal();closeMenu()}
 });
+
+// ── LIFECYCLE / BACKGROUND PLAYBACK HARDENING ────────────────────────────────
+// Rules:
+//  • NEVER pause audio on visibilitychange / pagehide — the browser handles
+//    background audio correctly; our job is only to keep Media Session fresh.
+//  • Refresh Media Session metadata + position state when the user returns so
+//    the Android lock screen scrubber / controls are in sync.
+//  • pagehide fires on bfcache-eligible pages; audio keeps playing automatically.
+
+document.addEventListener('visibilitychange',()=>{
+  // Page becoming visible again (user lifts screen, switches back from another app)
+  if(!document.hidden && currentTrackId && 'mediaSession' in navigator){
+    const track=tracks.find(t=>t.id===currentTrackId);
+    if(track) updateMediaSession(track);  // refresh metadata + handlers
+    _syncMediaSessionState();             // re-push position so scrubber is accurate
+  }
+});
+
+window.addEventListener('pageshow',e=>{
+  // Restored from bfcache — re-register everything so lock screen controls work
+  if(currentTrackId && 'mediaSession' in navigator){
+    const track=tracks.find(t=>t.id===currentTrackId);
+    if(track) updateMediaSession(track);
+    _syncMediaSessionState();
+  }
+});
+
+// pagehide: do NOT stop audio. Just let the browser take over.
+// (no handler needed — absence of a handler is the correct behaviour)
+
+// Refresh position state every ~15 s while playing so the lock-screen
+// scrubber stays roughly accurate without hammering the API.
+// This is a low-frequency safety-net; primary sync is still event-driven.
+let _posStateTick=null;
+audio.addEventListener('play',()=>{
+  if(_posStateTick)return;
+  _posStateTick=setInterval(()=>{
+    if(!audio.paused) _syncMediaSessionState();
+  },15000);
+},{capture:true,passive:true});
+audio.addEventListener('pause',()=>{
+  clearInterval(_posStateTick);_posStateTick=null;
+},{capture:true,passive:true});
+audio.addEventListener('ended',()=>{
+  clearInterval(_posStateTick);_posStateTick=null;
+},{capture:true,passive:true});
 
 // ══════════════════════════════════════════
 //  POLISH LAYER — Dynamic Color + Vis + FX
