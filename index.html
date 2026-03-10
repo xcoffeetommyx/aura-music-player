@@ -2205,7 +2205,93 @@ body.is-playing .vis-bars:hover{opacity:1}
   transform:translate(-50%,-50%) scale(1.12);
   opacity:.9;
 }
-/* Drag handle in the queue page view (inside track-row grid) */
+/* ─── SETTINGS PAGE ─────────────────────── */
+.settings-section-title{
+  font-size:11px;font-weight:600;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:1.5px;
+  margin:24px 0 10px;padding:0 2px;
+}
+.settings-card{
+  background:rgba(11,18,32,0.8);
+  border:1px solid rgba(0,212,232,0.1);
+  border-radius:var(--radius);
+  overflow:hidden;
+  backdrop-filter:blur(10px);
+  margin-bottom:8px;
+}
+.settings-row{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 16px;
+  border-bottom:1px solid rgba(0,212,232,0.05);
+  transition:background var(--transition);
+}
+.settings-row:last-child{border-bottom:none}
+.settings-row-icon{
+  width:34px;height:34px;border-radius:9px;
+  background:rgba(0,212,232,0.1);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;color:var(--accent);
+}
+.settings-row-icon svg{width:16px;height:16px}
+.settings-row-label{flex:1;font-size:14px;font-weight:500;color:var(--text)}
+.settings-row-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+
+/* Tab customiser */
+.tab-picker-grid{
+  display:flex;flex-direction:column;gap:6px;
+  margin-bottom:16px;
+}
+.tab-picker-item{
+  display:flex;align-items:center;gap:12px;
+  background:rgba(11,18,32,0.8);
+  border:1px solid rgba(0,212,232,0.1);
+  border-radius:12px;padding:11px 14px;
+  cursor:grab;
+  user-select:none;-webkit-user-select:none;
+  transition:border-color .2s,background .2s;
+  position:relative;
+}
+.tab-picker-item.drag-over-top{box-shadow:inset 0 2px 0 var(--accent)}
+.tab-picker-item.drag-over-bottom{box-shadow:inset 0 -2px 0 var(--accent)}
+.tab-picker-item.dragging{opacity:.3;border-style:dashed}
+.tab-picker-item:active{cursor:grabbing}
+.tab-picker-drag{
+  color:var(--text-muted);flex-shrink:0;
+  display:flex;align-items:center;
+}
+.tab-picker-drag svg{width:16px;height:16px}
+.tab-picker-icon{
+  width:32px;height:32px;border-radius:8px;
+  background:rgba(0,212,232,0.1);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--accent);flex-shrink:0;
+}
+.tab-picker-icon svg{width:15px;height:15px}
+.tab-picker-name{flex:1;font-size:14px;font-weight:500;color:var(--text)}
+.tab-picker-remove{
+  background:none;border:none;cursor:pointer;
+  padding:6px;border-radius:50%;
+  color:var(--text-muted);transition:all .2s;
+  display:flex;align-items:center;
+}
+.tab-picker-remove:hover{color:var(--red);background:rgba(255,78,106,0.1)}
+.tab-picker-remove svg{width:14px;height:14px}
+.tab-picker-add-row{
+  display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;
+}
+.tab-add-chip{
+  display:flex;align-items:center;gap:7px;
+  padding:7px 13px;border-radius:20px;
+  background:rgba(0,212,232,0.06);
+  border:1px solid rgba(0,212,232,0.2);
+  color:var(--accent2);font-size:12px;font-weight:600;
+  cursor:pointer;transition:all .2s;
+  font-family:'Outfit',sans-serif;
+}
+.tab-add-chip:hover{background:rgba(0,212,232,0.14);border-color:var(--accent)}
+.tab-add-chip svg{width:13px;height:13px}
+
+
 .track-queue-handle{
   display:flex;align-items:center;justify-content:center;
   width:28px;height:28px;cursor:grab;
@@ -2216,6 +2302,50 @@ body.is-playing .vis-bars:hover{opacity:1}
 .track-row:hover .track-queue-handle{opacity:1}
 .track-row:active .track-queue-handle,.track-queue-handle:active{cursor:grabbing}
 .track-queue-handle svg{width:16px;height:16px}
+
+/* ─── THEMES ────────────────────────────── */
+body.theme-green{
+  --accent:#39ff6e;--accent2:#6fffaa;--accent3:#39ffb8;
+  --accent-dim:#1a8c3c;--accent-deep:#073d1a;
+  --accent-glow:rgba(57,255,110,0.3);--accent-glow2:rgba(57,255,110,0.1);--accent-glow3:rgba(57,255,110,0.05);
+  --np-r:57;--np-g:255;--np-b:110;
+}
+body.theme-yellow{
+  --accent:#f5ff00;--accent2:#ffff66;--accent3:#c8ff00;
+  --accent-dim:#7a8000;--accent-deep:#353600;
+  --accent-glow:rgba(245,255,0,0.3);--accent-glow2:rgba(245,255,0,0.1);--accent-glow3:rgba(245,255,0,0.05);
+  --np-r:245;--np-g:255;--np-b:0;
+}
+body.theme-pink{
+  --accent:#ff00aa;--accent2:#ff66cc;--accent3:#ff0066;
+  --accent-dim:#880058;--accent-deep:#3d0028;
+  --accent-glow:rgba(255,0,170,0.3);--accent-glow2:rgba(255,0,170,0.1);--accent-glow3:rgba(255,0,170,0.05);
+  --np-r:255;--np-g:0;--np-b:170;
+}
+/* Theme swatch row */
+.theme-swatches{display:flex;gap:14px;flex-wrap:wrap;padding:6px 0 10px}
+.theme-swatch{
+  width:52px;height:52px;border-radius:50%;
+  cursor:pointer;position:relative;
+  transition:transform .2s,box-shadow .2s;
+  flex-shrink:0;border:3px solid transparent;
+}
+.theme-swatch:hover{transform:scale(1.1)}
+.theme-swatch.active{
+  border-color:rgba(255,255,255,0.85);
+  transform:scale(1.12);
+}
+.theme-swatch .swatch-check{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .2s;
+}
+.theme-swatch.active .swatch-check{opacity:1}
+.theme-swatch .swatch-check svg{width:22px;height:22px;color:#fff;filter:drop-shadow(0 1px 4px rgba(0,0,0,.6))}
+/* Settings clickable row */
+.settings-row.clickable{cursor:pointer}
+.settings-row.clickable:hover{background:rgba(0,212,232,0.05)}
+.settings-row-chevron{color:var(--text-muted);flex-shrink:0;display:flex;align-items:center}
+.settings-row-chevron svg{width:16px;height:16px}
 
 </style>
 </head>
@@ -2280,14 +2410,10 @@ body.is-playing .vis-bars:hover{opacity:1}
   </div>
 
   <div class="sidebar-section">More</div>
-  <div class="nav-item" data-view="about" onclick="navigate('about')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-    About
+  <div class="nav-item" data-view="settings" onclick="navigate('settings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Settings
   </div>
-  <a class="nav-item" href="https://www.paypal.com/donate/?hosted_button_id=R8NB9TNPCEAXJ" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-    Support
-  </a>
 
   <div class="sidebar-bottom">
     <button class="add-btn" onclick="showImportOptions()">
@@ -2362,7 +2488,7 @@ body.is-playing .vis-bars:hover{opacity:1}
     </div>
     <div class="player-progress">
       <span class="time-label" id="time-current">0:00</span>
-      <div class="progress-bar" id="progress-bar" onclick="seekTo(event)">
+      <div class="progress-bar" id="progress-bar">
         <div class="progress-fill" id="progress-fill" style="width:0%"></div>
       </div>
       <span class="time-label right" id="time-total">0:00</span>
@@ -2572,29 +2698,8 @@ body.is-playing .vis-bars:hover{opacity:1}
   </div>
 </div>
 
-<!-- BOTTOM NAV (mobile) -->
-<div id="bottom-nav">
-  <div class="bnav-item active" id="bnav-library" onclick="navigate('library');setBottomNav('library')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-    Songs
-  </div>
-  <div class="bnav-item" id="bnav-queue" onclick="openQueueOverlay()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-    Queue
-  </div>
-  <div class="bnav-item" id="bnav-playlists" onclick="navigate('playlists');setBottomNav('playlists')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-    Playlists
-  </div>
-  <div class="bnav-item" id="bnav-favorites" onclick="navigate('favorites');setBottomNav('favorites')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-    Favorites
-  </div>
-  <div class="bnav-item" id="bnav-more" onclick="toggleSidebar()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    More
-  </div>
-</div>
+<!-- BOTTOM NAV (mobile) — rendered dynamically by renderBottomNav() -->
+<div id="bottom-nav"></div>
 
 <!-- MINI PLAYER (mobile) -->
 <div id="mini-player" onclick="openNowPlaying()">
@@ -2665,7 +2770,7 @@ body.is-playing .vis-bars:hover{opacity:1}
 
 <!-- Hidden file inputs -->
 <input type="file" id="file-input" multiple accept="audio/*,.flac,.ogg,.opus,.m4a,.aac,.wav,.mp3,.wma,.aiff,.ape" style="display:none" onchange="handleFiles(this.files)">
-<input type="file" id="folder-input" multiple webkitdirectory accept="audio/*" style="display:none" onchange="handleFiles(this.files)">
+<input type="file" id="folder-input" multiple webkitdirectory accept="audio/*" style="display:none" onchange="handleFolderFiles(this.files)">
 <audio id="audio" preload="metadata"></audio>
 
 <script>
@@ -2678,6 +2783,10 @@ let currentView='library',currentTrackId=null;
 let shuffle=false,repeat=0; // 0=none,1=all,2=one
 let shuffleOrder=[],shufflePos=0;
 let volume=0.8,muted=false;
+let fadeMul=1; // crossfade multiplier (0–1), applied on top of user volume
+let gapless=false;
+let _gaplessFired=false; // prevents 'ended' from double-advancing during crossfade
+let _pausedByMute=false; // tracks whether WE paused due to mute/zero-vol
 let searchQ='',sortMode='title';
 let ctxTrackId=null,modalCallback=null;
 let npOpen=false;
@@ -2880,6 +2989,113 @@ async function handleFiles(fileList){
 
 function truncate(str,max){return str.length>max?str.slice(0,max-1)+'…':str;}
 
+// Detect the root folder name from a FileList (uses webkitRelativePath)
+function _detectFolderName(files){
+  for(const f of files){
+    if(!f.webkitRelativePath) continue;
+    const parts=f.webkitRelativePath.split('/');
+    if(parts.length>1) return parts[0]; // first segment is the chosen folder
+  }
+  return null;
+}
+
+// Wrapper for folder imports — shows rename prompt if browser gives a bad name
+async function handleFolderFiles(fileList){
+  const detectedName=_detectFolderName(fileList);
+  const BAD_NAMES=['document','documents','root','storage','downloads',''];
+  const needsRename=!detectedName||BAD_NAMES.includes(detectedName.toLowerCase());
+
+  if(needsRename){
+    // Show rename dialog before importing
+    const folderName=await _promptFolderName(detectedName||'');
+    if(folderName===null) return; // user cancelled
+    // Monkey-patch webkitRelativePath to inject the custom name
+    const patchedFiles=Array.from(fileList).map(f=>{
+      // We can't modify the real File, so wrap it in a Proxy-like object
+      const orig=f.webkitRelativePath||f.name;
+      const parts=orig.split('/');
+      // Replace bad root with user-supplied name
+      if(parts.length>1) parts[0]=folderName;
+      else parts.unshift(folderName); // flat import — inject folder
+      const newPath=parts.join('/');
+      return new Proxy(f,{
+        get(target,prop){
+          if(prop==='webkitRelativePath') return newPath;
+          const val=target[prop];
+          return typeof val==='function'?val.bind(target):val;
+        }
+      });
+    });
+    await handleFiles(patchedFiles);
+  } else {
+    await handleFiles(fileList);
+  }
+}
+
+function _promptFolderName(detected){
+  return new Promise(resolve=>{
+    const overlay=document.createElement('div');
+    overlay.style.cssText=`position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);
+      z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px`;
+
+    const hint=detected&&detected.toLowerCase()!==''
+      ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.5">
+           Browser reported the folder as <code style="color:var(--accent2);background:rgba(0,0,0,.3);padding:1px 6px;border-radius:4px">${detected}</code> —
+           enter a better name below.
+         </div>`
+      : `<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.5">
+           Your browser couldn't read the folder name. Enter one manually.
+         </div>`;
+
+    overlay.innerHTML=`
+      <div style="background:var(--surface2);border:1px solid rgba(0,212,232,0.2);border-radius:18px;
+                  padding:24px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.6)">
+        <div style="font-family:'Exo 2',sans-serif;font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px">
+          Name This Folder
+        </div>
+        ${hint}
+        <input id="_fn-input" type="text" placeholder="e.g. My Albums"
+          style="width:100%;box-sizing:border-box;padding:11px 14px;
+                 background:rgba(0,0,0,.3);border:1.5px solid rgba(0,212,232,0.25);
+                 border-radius:10px;color:var(--text);font-size:15px;font-family:'Outfit',sans-serif;
+                 outline:none;margin-bottom:16px;transition:border-color .2s"
+          onfocus="this.style.borderColor='var(--accent)'"
+          onblur="this.style.borderColor='rgba(0,212,232,0.25)'"
+        />
+        <div style="display:flex;gap:10px">
+          <button id="_fn-cancel"
+            style="flex:1;padding:11px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);
+                   background:rgba(255,255,255,0.06);color:var(--text-muted);font-size:14px;
+                   cursor:pointer;font-family:'Outfit',sans-serif">
+            Cancel
+          </button>
+          <button id="_fn-ok"
+            style="flex:2;padding:11px;border-radius:10px;border:none;
+                   background:var(--accent);color:#000;font-size:14px;font-weight:700;
+                   cursor:pointer;font-family:'Outfit',sans-serif">
+            Import
+          </button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(overlay);
+    const input=overlay.querySelector('#_fn-input');
+    input.focus();
+
+    const cleanup=val=>{overlay.remove();resolve(val)};
+    overlay.querySelector('#_fn-cancel').onclick=()=>cleanup(null);
+    overlay.querySelector('#_fn-ok').onclick=()=>{
+      const v=input.value.trim();
+      if(!v){input.style.borderColor='var(--red)';input.focus();return;}
+      cleanup(v);
+    };
+    input.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){const v=input.value.trim();if(!v){input.style.borderColor='var(--red)';return;}cleanup(v);}
+      if(e.key==='Escape')cleanup(null);
+    });
+  });
+}
+
 function readFileMeta(file){
   return new Promise(resolve=>{
     const track={
@@ -3005,6 +3221,13 @@ async function playTrack(id,resetQueue=false){
   track.playCount=(track.playCount||0)+1;
   track.lastPlayed=Date.now();
   dbUpdateTrackMeta(id,{playCount:track.playCount,lastPlayed:track.lastPlayed}).catch(()=>{});
+
+  // Cancel any in-progress crossfade when user manually picks a track
+  if(!_gaplessFired){
+    _fadeInStart=null;
+    fadeMul=1;
+  }
+  _applyVolume();
 
   audio.pause();
   audio.src=src;
@@ -3206,21 +3429,54 @@ function seekTo(e){
 function setVolume(e){
   const bar=document.getElementById('vol-bar');
   const rect=bar.getBoundingClientRect();
-  volume=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
-  audio.volume=volume;
+  const newVol=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
+  const wasZero=volume===0||muted;
+  volume=newVol;
+  // Un-mute silently if user drags volume up while muted
+  if(muted&&volume>0){muted=false;audio.muted=false;_updateMuteIcon();}
+  _applyVolume();
   document.getElementById('vol-fill').style.width=(volume*100)+'%';
   saveSetting('volume',volume);
+  if(volume===0&&!audio.paused){
+    _pausedByMute=true;audio.pause();
+  } else if(volume>0&&wasZero&&_pausedByMute&&currentTrackId){
+    _pausedByMute=false;audio.play().catch(()=>{});
+  }
 }
 function toggleMute(){
-  muted=!muted;audio.muted=muted;
+  muted=!muted;
+  audio.muted=muted;
+  _updateMuteIcon();
+  _applyVolume();
+  if(muted&&!audio.paused){
+    _pausedByMute=true;audio.pause();
+  } else if(!muted&&_pausedByMute&&currentTrackId){
+    _pausedByMute=false;audio.play().catch(()=>{});
+  }
+}
+function _updateMuteIcon(){
   const icon=document.getElementById('vol-icon');
-  icon.innerHTML=muted
+  if(!icon)return;
+  icon.innerHTML=muted||volume===0
     ?'<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>'
     :'<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>';
 }
 
 // ==================== AUDIO EVENTS ====================
+const FADE_DUR=5; // crossfade duration in seconds
 let _lastPosSaveTimer=null;
+// No RAF — fades are driven by timeupdate so they work on locked screens
+let _fadeInStart=null; // performance.now() timestamp when fade-in began, null if not fading in
+
+function _applyVolume(){
+  audio.volume=muted?0:Math.max(0,Math.min(1,volume*fadeMul));
+}
+
+function _cancelFade(){
+  _fadeInStart=null;
+  fadeMul=1;_gaplessFired=false;_applyVolume();
+}
+
 audio.addEventListener('timeupdate',()=>{
   if(!audio.duration)return;
   const pct=(audio.currentTime/audio.duration*100)+'%';
@@ -3230,20 +3486,48 @@ audio.addEventListener('timeupdate',()=>{
   const cur=formatTime(audio.currentTime);
   document.getElementById('time-current').textContent=cur;
   document.getElementById('np-time-current').textContent=cur;
-  // Throttle IDB writes to once every 5s — timeupdate fires up to 250x/sec
-  // and each saveSetting opens a readwrite transaction; un-throttled this
-  // creates a transaction storm that exhausts memory on Android.
   if(!_lastPosSaveTimer){
     _lastPosSaveTimer=setTimeout(()=>{
       saveSetting('lastPos',audio.currentTime);
       _lastPosSaveTimer=null;
     },5000);
   }
+
+  // ── Gapless fade-in (new track, counting up from currentTime 0) ──────────
+  if(_fadeInStart!==null){
+    const elapsed=audio.currentTime; // seconds into the new track
+    if(elapsed>=FADE_DUR){
+      fadeMul=1;_fadeInStart=null;_applyVolume();
+    } else {
+      fadeMul=elapsed/FADE_DUR;
+      _applyVolume();
+    }
+    return; // skip fade-out logic while fading in
+  }
+
+  // ── Gapless fade-out (current track ending) ───────────────────────────────
+  if(gapless&&!_gaplessFired&&audio.duration>FADE_DUR*1.5){
+    const remaining=audio.duration-audio.currentTime;
+    if(remaining<=FADE_DUR&&remaining>0){
+      fadeMul=Math.max(0,remaining/FADE_DUR);
+      _applyVolume();
+    }
+    if(remaining<=0.15){
+      _gaplessFired=true;
+      playNext();
+    }
+  }
 });
 audio.addEventListener('loadedmetadata',()=>{
   const tot=formatTime(audio.duration);
   document.getElementById('time-total').textContent=tot;
   document.getElementById('np-time-total').textContent=tot;
+  // If this load was triggered by a gapless advance, start a timeupdate-driven fade-in
+  if(gapless&&_gaplessFired){
+    _gaplessFired=false;
+    fadeMul=0;_applyVolume();
+    _fadeInStart=0; // non-null signals timeupdate to handle the ramp
+  }
 });
 audio.addEventListener('play',()=>{
   const pauseIcon=`<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>`;
@@ -3253,7 +3537,6 @@ audio.addEventListener('play',()=>{
   document.body.classList.add('is-playing');
   setVinylSpin(true);
   startVisualizer();
-  // Start particles only if NP overlay is currently open
   if(document.getElementById('now-playing-overlay').classList.contains('open')) startParticles();
 });
 audio.addEventListener('pause',()=>{
@@ -3266,8 +3549,12 @@ audio.addEventListener('pause',()=>{
   stopVisualizer();
   stopParticles();
 });
-audio.addEventListener('ended',()=>playNext());
-audio.volume=volume;
+audio.addEventListener('ended',()=>{
+  if(_gaplessFired){_gaplessFired=false;return;} // gapless already called playNext
+  _cancelFade();
+  playNext();
+});
+_applyVolume(); // sync audio.volume on startup
 
 // ==================== VISUALIZER ====================
 function startVisualizer(){
@@ -3369,20 +3656,62 @@ async function removeFromPlaylist(playlistId,trackId){
   toast('Removed from playlist');
 }
 
-// ==================== NAVIGATION ====================
-function setBottomNav(view){
-  document.querySelectorAll('.bnav-item').forEach(el=>el.classList.remove('active'));
-  const map={library:'bnav-library',playlists:'bnav-playlists',favorites:'bnav-favorites'};
-  if(map[view])document.getElementById(map[view]).classList.add('active');
+// ==================== BOTTOM NAV TAB SYSTEM ====================
+const BNAV_CATALOG = [
+  { id:'library',   label:'Songs',     action:"navigate('library');bnavSetActive('library')",      svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>` },
+  { id:'queue',     label:'Queue',     action:"openQueueOverlay()",                                 svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>` },
+  { id:'playlists', label:'Playlists', action:"navigate('playlists');bnavSetActive('playlists')",   svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>` },
+  { id:'favorites', label:'Favorites', action:"navigate('favorites');bnavSetActive('favorites')",   svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>` },
+  { id:'search',    label:'Search',    action:"bnavSearch()",                                       svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>` },
+  { id:'albums',    label:'Albums',    action:"navigate('albums');bnavSetActive('albums')",         svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>` },
+  { id:'artists',   label:'Artists',   action:"navigate('artists');bnavSetActive('artists')",       svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>` },
+  { id:'folders',   label:'Folders',   action:"navigate('folders');bnavSetActive('folders')",       svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>` },
+];
+const BNAV_DEFAULT = ['library','queue','playlists','favorites','search'];
+
+function loadBnavConfig(){
+  try{const s=localStorage.getItem('aura_bnav');if(s){const p=JSON.parse(s);if(Array.isArray(p)&&p.length>=3)return p;}}catch(e){}
+  return[...BNAV_DEFAULT];
 }
+function saveBnavConfig(cfg){try{localStorage.setItem('aura_bnav',JSON.stringify(cfg));}catch(e){}}
+let bnavConfig=loadBnavConfig();
+
+function renderBottomNav(){
+  const nav=document.getElementById('bottom-nav');
+  if(!nav)return;
+  nav.innerHTML=bnavConfig.map(id=>{
+    const tab=BNAV_CATALOG.find(t=>t.id===id);
+    if(!tab)return'';
+    return`<div class="bnav-item" id="bnav-${tab.id}" data-bnav="${tab.id}" onclick="${tab.action}">${tab.svg}${tab.label}</div>`;
+  }).join('');
+  bnavSetActive(currentView);
+}
+
+function bnavSetActive(view){
+  document.querySelectorAll('#bottom-nav .bnav-item').forEach(el=>{
+    el.classList.toggle('active',el.dataset.bnav===view);
+  });
+}
+
+function setBottomNav(view){bnavSetActive(view);}
+
+function bnavSearch(){
+  closeSidebar();
+  bnavSetActive('search');
+  const s=document.getElementById('search');
+  if(s){s.focus();s.select();}
+}
+
+// ==================== NAVIGATION ====================
 function navigate(view,extra){
+  if(currentView==='settings'&&view!=='settings') settingsSubView='main';
   currentView=view;
   document.querySelectorAll('.nav-item').forEach(el=>{
     el.classList.toggle('active',el.dataset.view===view);
   });
-  const titles={library:'Songs',albums:'Albums',artists:'Artists',folders:'Folders',playlists:'Playlists',favorites:'Favorites',savedQueues:'Queues',about:'About'};
+  const titles={library:'Songs',albums:'Albums',artists:'Artists',folders:'Folders',playlists:'Playlists',favorites:'Favorites',savedQueues:'Queues',about:'About',settings:'Settings'};
   document.getElementById('page-title').textContent=extra||titles[view]||view;
-  setBottomNav(view);
+  bnavSetActive(view);
   renderCurrentView();
   closeSidebar();
 }
@@ -3409,6 +3738,7 @@ function renderCurrentView(){
     case'favorites':renderFavorites(c,filtered);break;
     case'savedQueues':renderSavedQueues(c);break;
     case'about':renderAbout(c);break;
+    case'settings':renderSettings(c);break;
     default:if(currentView.startsWith('playlist:')){
       const id=parseInt(currentView.split(':')[1]);
       renderPlaylistDetail(c,id);
@@ -3534,9 +3864,22 @@ function renderFolders(c){
   const visible=depth===0?folders:folders.filter(f=>f.name.startsWith(folderPath.join('/')));
   const tracksInCurrent=tracks.filter(t=>(t.folder||'-')===folderPath.join('/'));
   c.innerHTML=`
-    <div class="folder-breadcrumb">
-      <span class="breadcrumb-item ${depth===0?'active':''}" onclick="folderPath=[];renderCurrentView()">All Folders</span>
-      ${folderPath.filter(p=>p.toLowerCase()!=='document').map((p,i)=>`<span class="breadcrumb-sep">›</span><span class="breadcrumb-item ${i===folderPath.length-1?'active':''}" onclick="folderPath=folderPath.slice(0,${i+1});renderCurrentView()">${escHTML(p)}</span>`).join('')}
+    <div class="folder-breadcrumb" style="justify-content:space-between;align-items:center;flex-wrap:nowrap;gap:8px">
+      <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;flex:1;min-width:0">
+        <span class="breadcrumb-item ${depth===0?'active':''}" onclick="folderPath=[];renderCurrentView()">All Folders</span>
+        ${folderPath.filter(p=>p.toLowerCase()!=='document').map((p,i)=>`<span class="breadcrumb-sep">›</span><span class="breadcrumb-item ${i===folderPath.length-1?'active':''}" onclick="folderPath=folderPath.slice(0,${i+1});renderCurrentView()">${escHTML(p)}</span>`).join('')}
+      </div>
+      <button onclick="document.getElementById('folder-input').click()"
+        style="flex-shrink:0;display:flex;align-items:center;gap:6px;padding:7px 14px;
+               background:rgba(0,212,232,0.08);border:1px solid rgba(0,212,232,0.25);
+               border-radius:20px;color:var(--accent2);font-size:13px;font-weight:600;
+               cursor:pointer;font-family:'Outfit',sans-serif;white-space:nowrap;
+               transition:all .2s"
+        onmouseover="this.style.background='rgba(0,212,232,0.15)'"
+        onmouseout="this.style.background='rgba(0,212,232,0.08)'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Folder
+      </button>
     </div>
     ${depth>0&&tracksInCurrent.length?`<div class="track-list">${(()=>{const ids=JSON.stringify(tracksInCurrent.map(t=>t.id));return tracksInCurrent.map((t,i)=>trackRowHTML(t,i+1,ids)).join('');})()}</div>`:''}
     ${visible.filter(f=>f.name!==folderPath.join('/')).map(f=>{
@@ -4499,7 +4842,7 @@ function applyUpdate(){
 
 // ==================== ABOUT ====================
 function renderAbout(c){
-  const BUILD = window._swVersion || '1.1';
+  const BUILD = window._swVersion || '2.0';
   const BUILD_DATE = new Date().getFullYear();
   c.innerHTML=`
   <div class="about-page view-enter">
@@ -4584,7 +4927,295 @@ function renderAbout(c){
   </div>`;
 }
 
-// ==================== INIT ====================
+// ==================== SETTINGS ====================
+
+function toggleGapless(){
+  gapless=!gapless;
+  saveSetting('gapless',gapless);
+  if(!gapless){fadeMul=1;_gaplessFired=false;_applyVolume();}
+  // Re-render settings to update toggle visual
+  renderSettings(document.getElementById('content'));
+  toast(gapless?'Gapless playback on':'Gapless playback off');
+}
+
+// ── Theme system ──────────────────────────────────
+const THEMES=[
+  {id:'cyan',   label:'Cyan',        swatch:'#00d4e8'},
+  {id:'green',  label:'Neon Green',  swatch:'#39ff6e'},
+  {id:'yellow', label:'Neon Yellow', swatch:'#f5ff00'},
+  {id:'pink',   label:'Neon Pink',   swatch:'#ff00aa'},
+];
+let currentTheme=localStorage.getItem('aura_theme')||'cyan';
+
+function applyTheme(id){
+  currentTheme=id;
+  localStorage.setItem('aura_theme',id);
+  document.body.classList.remove('theme-green','theme-yellow','theme-pink');
+  if(id!=='cyan') document.body.classList.add('theme-'+id);
+}
+
+// ── Settings sub-view: 'main' | 'nav' ────────────
+let settingsSubView='main';
+
+function renderSettings(c){
+  if(settingsSubView==='nav'){renderNavCustomize(c);return;}
+
+  c.innerHTML=`
+  <div class="view-enter" style="max-width:540px;margin:0 auto">
+
+    <div class="settings-section-title">Appearance</div>
+    <div class="settings-card">
+      <div class="settings-row" style="border-bottom:1px solid rgba(0,212,232,0.08)">
+        <div class="settings-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </div>
+        <div>
+          <div class="settings-row-label">Accent Color</div>
+          <div class="settings-row-sub">Choose your neon glow</div>
+        </div>
+      </div>
+      <div style="padding:18px 16px 16px;display:flex;gap:0;justify-content:space-around;align-items:flex-end">
+        ${THEMES.map(t=>{
+          const glowColors={cyan:'0,212,232',green:'57,255,110',yellow:'245,255,0',pink:'255,0,170'};
+          const glow=glowColors[t.id]||'0,212,232';
+          const active=currentTheme===t.id;
+          return`<div style="display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;-webkit-tap-highlight-color:transparent"
+               onclick="applyTheme('${t.id}');renderSettings(document.getElementById('content'))">
+            <div style="
+              width:56px;height:56px;border-radius:50%;
+              background:${t.swatch};
+              border:${active?'3px solid rgba(255,255,255,0.9)':'3px solid rgba(255,255,255,0.12)'};
+              box-shadow:${active?`0 0 0 3px rgba(${glow},0.35),0 4px 20px rgba(${glow},0.5)`:`0 2px 10px rgba(${glow},0.25)`};
+              display:flex;align-items:center;justify-content:center;
+              transition:all .2s;position:relative;
+              transform:${active?'scale(1.12)':'scale(1)'};
+            ">
+              ${active?`<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" style="width:22px;height:22px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))"><polyline points="20 6 9 17 4 12"/></svg>`:''}
+            </div>
+            <span style="font-size:10px;font-weight:${active?'700':'500'};color:${active?'var(--accent2)':'var(--text-muted)'};letter-spacing:.3px;text-align:center;line-height:1.2">${t.label}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="settings-section-title">Playback</div>
+    <div class="settings-card">
+      <div class="settings-row">
+        <div class="settings-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </div>
+        <div style="flex:1">
+          <div class="settings-row-label">Gapless Playback</div>
+          <div class="settings-row-sub">Crossfade between tracks — no silence</div>
+        </div>
+        <div onclick="toggleGapless()" id="gapless-toggle"
+          style="width:44px;height:26px;border-radius:13px;cursor:pointer;flex-shrink:0;
+                 background:${gapless?'var(--accent)':'rgba(255,255,255,0.12)'};
+                 position:relative;transition:background .25s">
+          <div style="width:20px;height:20px;border-radius:50%;background:#fff;
+                      position:absolute;top:3px;
+                      left:${gapless?'21px':'3px'};transition:left .25s;
+                      box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section-title">Navigation</div>
+    <div class="settings-card">
+      <div class="settings-row clickable" onclick="settingsSubView='nav';renderSettings(document.getElementById('content'))">
+        <div class="settings-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="17" width="20" height="5" rx="2"/><rect x="2" y="10" width="4" height="5" rx="1"/><rect x="10" y="10" width="4" height="5" rx="1"/><rect x="18" y="10" width="4" height="5" rx="1"/></svg>
+        </div>
+        <div style="flex:1">
+          <div class="settings-row-label">Customize Nav Bar</div>
+          <div class="settings-row-sub">Reorder or swap bottom tabs</div>
+        </div>
+        <div class="settings-row-chevron">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section-title">App Info</div>
+    <div class="settings-card">
+      <div class="settings-row clickable" onclick="navigate('about')">
+        <div class="settings-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div style="flex:1">
+          <div class="settings-row-label">About Aura</div>
+          <div class="settings-row-sub">Version info &amp; features</div>
+        </div>
+        <div class="settings-row-chevron">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <div style="flex:1">
+          <div class="settings-row-label">Support Development</div>
+          <div class="settings-row-sub">Buy me a coffee ☕</div>
+        </div>
+        <a class="btn-sm ghost" href="https://www.paypal.com/donate/?hosted_button_id=R8NB9TNPCEAXJ" target="_blank" rel="noopener noreferrer" style="font-size:11px;padding:6px 12px;text-decoration:none;flex-shrink:0">Donate</a>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderNavCustomize(c){
+  const activeIds=new Set(bnavConfig);
+  const available=BNAV_CATALOG.filter(t=>!activeIds.has(t.id));
+
+  c.innerHTML=`
+  <div class="view-enter" style="max-width:540px;margin:0 auto">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <button onclick="settingsSubView='main';renderSettings(document.getElementById('content'))"
+        style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;
+               padding:7px 14px;color:var(--accent2);font-size:13px;font-weight:600;cursor:pointer;
+               display:flex;align-items:center;gap:6px;font-family:'Outfit',sans-serif;transition:background .2s"
+        onmouseover="this.style.background='rgba(255,255,255,0.1)'"
+        onmouseout="this.style.background='rgba(255,255,255,0.06)'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </button>
+      <span style="font-family:'Exo 2',sans-serif;font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.3px">Customize Nav Bar</span>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.6">
+      Drag to reorder. Tap <span style="color:var(--red);font-weight:700">✕</span> to remove. Minimum 3 tabs required.
+    </p>
+    <div id="tab-picker-active" class="tab-picker-grid">
+      ${bnavConfig.map((id,i)=>{
+        const tab=BNAV_CATALOG.find(t=>t.id===id);
+        if(!tab)return'';
+        return`<div class="tab-picker-item" data-tab-id="${tab.id}" data-tab-idx="${i}" draggable="true">
+          <div class="tab-picker-drag">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/></svg>
+          </div>
+          <div class="tab-picker-icon">${tab.svg}</div>
+          <div class="tab-picker-name">${tab.label}</div>
+          <button class="tab-picker-remove" onclick="settingsRemoveTab('${tab.id}')" title="Remove">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>`;
+      }).join('')}
+    </div>
+    ${available.length?`
+    <div class="settings-section-title" style="margin-top:24px">Add a Tab</div>
+    <div class="tab-picker-add-row" id="tab-picker-add">
+      ${available.map(tab=>`
+        <div class="tab-add-chip" onclick="settingsAddTab('${tab.id}')">
+          ${tab.svg}${tab.label}
+        </div>`).join('')}
+    </div>`:''}
+  </div>`;
+
+  wireTabPickerDrag();
+}
+
+function settingsRemoveTab(id){
+  if(bnavConfig.length<=3){toast('Must keep at least 3 tabs');return;}
+  bnavConfig=bnavConfig.filter(t=>t!==id);
+  saveBnavConfig(bnavConfig);
+  renderBottomNav();
+  renderNavCustomize(document.getElementById('content'));
+}
+
+function settingsAddTab(id){
+  if(bnavConfig.includes(id))return;
+  bnavConfig.push(id);
+  saveBnavConfig(bnavConfig);
+  renderBottomNav();
+  renderNavCustomize(document.getElementById('content'));
+}
+
+function wireTabPickerDrag(){
+  const container=document.getElementById('tab-picker-active');
+  if(!container)return;
+  let dragSrc=null,dragSrcIdx=-1;
+  let touchClone=null,lastOver=null,lastAbove=null;
+
+  function clearIndicators(){
+    container.querySelectorAll('.tab-picker-item').forEach(el=>
+      el.classList.remove('drag-over-top','drag-over-bottom'));
+  }
+  function commitReorder(srcIdx,destIdx,above){
+    if(srcIdx===destIdx)return;
+    const insertAt=above?destIdx:destIdx+1;
+    const eff=insertAt>srcIdx?insertAt-1:insertAt;
+    if(eff===srcIdx)return;
+    const moved=bnavConfig.splice(srcIdx,1)[0];
+    bnavConfig.splice(eff,0,moved);
+    saveBnavConfig(bnavConfig);
+    renderBottomNav();
+    renderNavCustomize(document.getElementById('content'));
+  }
+
+  container.querySelectorAll('.tab-picker-item').forEach(item=>{
+    const idx=()=>parseInt(item.dataset.tabIdx);
+    item.addEventListener('dragstart',e=>{
+      dragSrc=item;dragSrcIdx=idx();
+      e.dataTransfer.effectAllowed='move';
+      setTimeout(()=>item.classList.add('dragging'),0);
+    });
+    item.addEventListener('dragend',()=>{
+      item.classList.remove('dragging');clearIndicators();dragSrc=null;dragSrcIdx=-1;
+    });
+    item.addEventListener('dragover',e=>{
+      e.preventDefault();if(item===dragSrc)return;
+      clearIndicators();
+      const r=item.getBoundingClientRect();
+      item.classList.add(e.clientY<r.top+r.height/2?'drag-over-top':'drag-over-bottom');
+    });
+    item.addEventListener('drop',e=>{
+      e.preventDefault();clearIndicators();
+      if(!dragSrc||item===dragSrc)return;
+      const r=item.getBoundingClientRect();
+      commitReorder(dragSrcIdx,idx(),e.clientY<r.top+r.height/2);
+      dragSrc=null;dragSrcIdx=-1;
+    });
+    item.addEventListener('touchstart',e=>{
+      e.stopPropagation();
+      dragSrc=item;dragSrcIdx=idx();
+      item.classList.add('dragging');
+      touchClone=item.cloneNode(true);
+      touchClone.className='q-drag-ghost';
+      const r=item.getBoundingClientRect();
+      touchClone.style.width=item.offsetWidth+'px';
+      touchClone.style.left=r.left+'px';
+      touchClone.style.top=r.top+'px';
+      document.body.appendChild(touchClone);
+      lastOver=null;lastAbove=null;
+    },{passive:true});
+    item.addEventListener('touchmove',e=>{
+      if(!touchClone)return;
+      e.preventDefault();
+      const t=e.touches[0];
+      touchClone.style.transform=`translate(${t.clientX-parseFloat(touchClone.style.left)-touchClone.offsetWidth/2}px,${t.clientY-parseFloat(touchClone.style.top)-touchClone.offsetHeight/2}px)`;
+      touchClone.style.visibility='hidden';
+      const under=document.elementFromPoint(t.clientX,t.clientY);
+      touchClone.style.visibility='';
+      const over=under?under.closest('.tab-picker-item'):null;
+      if(over&&over!==dragSrc){
+        const r=over.getBoundingClientRect();
+        const above=t.clientY<r.top+r.height/2;
+        if(over!==lastOver||above!==lastAbove){clearIndicators();over.classList.add(above?'drag-over-top':'drag-over-bottom');lastOver=over;lastAbove=above;}
+      }else{clearIndicators();lastOver=null;lastAbove=null;}
+    },{passive:false});
+    function tpCleanup(commit){
+      if(touchClone){touchClone.remove();touchClone=null;}
+      clearIndicators();item.classList.remove('dragging');
+      const so=lastOver,sa=lastAbove,si=dragSrcIdx;
+      dragSrc=null;dragSrcIdx=-1;lastOver=null;lastAbove=null;
+      if(commit&&so&&so!==item)commitReorder(si,parseInt(so.dataset.tabIdx),sa);
+    }
+    item.addEventListener('touchend',()=>tpCleanup(true),{passive:true});
+    item.addEventListener('touchcancel',()=>tpCleanup(false),{passive:true});
+  });
+}
+
+
 async function init(){
   await initDB();
 
@@ -4611,6 +5242,7 @@ async function init(){
   shuffle=S['shuffle']||0;
   if(shuffle===true)shuffle=1;
   repeat=S['repeat']||0;
+  gapless=S['gapless']||false;
   updateShuffleUI();
 
   // Resume last track (lazy-load its fileData + artData)
@@ -4633,7 +5265,9 @@ async function init(){
     buildQueue();
   }
 
+  applyTheme(currentTheme);
   updateBadges();
+  renderBottomNav();
   renderCurrentView();
 
   // Register SW with update detection
@@ -4894,7 +5528,7 @@ function stopParticles(){
 // ── SWIPE GESTURES on NP overlay ─────────
 let _isDraggingQueueItem=false; // set true during touch-drag of queue items
 (function initSwipe(){
-  let t0x=0,t0y=0,t0ScrollEl=null,t0ScrollTop=0,t0InLyrics=false,t0OnArt=false;
+  let t0x=0,t0y=0,t0ScrollEl=null,t0ScrollTop=0,t0InLyrics=false,t0OnArt=false,t0OnSeek=false;
   const ov=()=>document.getElementById('now-playing-overlay');
   document.addEventListener('touchstart',e=>{
     if(!ov().classList.contains('open'))return;
@@ -4903,12 +5537,14 @@ let _isDraggingQueueItem=false; // set true during touch-drag of queue items
     t0ScrollEl=scrollable||null;
     t0ScrollTop=scrollable?scrollable.scrollTop:0;
     t0InLyrics=!!e.target.closest('#np-panel-lyrics');
-    t0OnArt=!!e.target.closest('#np-art-circle'); // art handles its own touch
+    t0OnArt=!!e.target.closest('#np-art-circle');
+    t0OnSeek=!!e.target.closest('#np-progress-bar,#progress-bar'); // progress bar handles its own drag
   },{passive:true});
   document.addEventListener('touchend',e=>{
     if(!ov().classList.contains('open'))return;
     if(_isDraggingQueueItem)return;
-    if(t0OnArt)return; // art element handles its own interactions
+    if(t0OnArt)return;
+    if(t0OnSeek)return; // never interpret a seek drag as a swipe
     const dx=e.changedTouches[0].clientX-t0x;
     const dy=e.changedTouches[0].clientY-t0y;
     if(Math.abs(dx)<40&&Math.abs(dy)<40)return;
@@ -4966,9 +5602,10 @@ let _isDraggingQueueItem=false; // set true during touch-drag of queue items
 
 // ── PROGRESS BAR DRAG ────────────────────
 (function initProgressDrag(){
-  function scrub(bar,e){
+  function scrub(bar,clientX){
     const rect=bar.getBoundingClientRect();
-    const x=Math.max(0,Math.min(e.clientX,rect.right));
+    // Clamp to bar bounds (rect.left..rect.right), not 0..rect.right
+    const x=Math.max(rect.left,Math.min(clientX,rect.right));
     const ratio=(x-rect.left)/rect.width;
     if(audio.duration) audio.currentTime=ratio*audio.duration;
   }
@@ -4976,21 +5613,41 @@ let _isDraggingQueueItem=false; // set true during touch-drag of queue items
     const bar=document.getElementById(id);
     if(!bar)return;
     let dragging=false;
+
+    // ── Desktop mouse ──
     bar.addEventListener('mousedown',e=>{
-      dragging=true; bar.classList.add('dragging'); scrub(bar,e);
-      const up=()=>{dragging=false;bar.classList.remove('dragging');window.removeEventListener('mousemove',move);window.removeEventListener('mouseup',up)};
-      const move=e2=>{if(dragging)scrub(bar,e2)};
+      e.preventDefault();
+      dragging=true; bar.classList.add('dragging'); scrub(bar,e.clientX);
+      const move=e2=>{if(dragging)scrub(bar,e2.clientX)};
+      const up=()=>{
+        dragging=false;bar.classList.remove('dragging');
+        window.removeEventListener('mousemove',move);
+        window.removeEventListener('mouseup',up);
+      };
       window.addEventListener('mousemove',move);
       window.addEventListener('mouseup',up);
     });
+
+    // ── Mobile touch ── (non-passive so we can preventDefault to stop page scroll)
     bar.addEventListener('touchstart',e=>{
+      e.preventDefault(); // stop scroll hijacking the drag
       dragging=true; bar.classList.add('dragging');
-      scrub(bar,{clientX:e.touches[0].clientX});
-    },{passive:true});
+      scrub(bar,e.touches[0].clientX);
+    },{passive:false});
     bar.addEventListener('touchmove',e=>{
-      if(dragging)scrub(bar,{clientX:e.touches[0].clientX});
-    },{passive:true});
-    bar.addEventListener('touchend',()=>{dragging=false;bar.classList.remove('dragging')});
+      if(!dragging)return;
+      e.preventDefault(); // keep preventing scroll throughout drag
+      scrub(bar,e.touches[0].clientX);
+    },{passive:false});
+    bar.addEventListener('touchend',e=>{
+      if(!dragging)return;
+      dragging=false; bar.classList.remove('dragging');
+      // Use changedTouches for the final position
+      if(e.changedTouches.length) scrub(bar,e.changedTouches[0].clientX);
+    });
+    bar.addEventListener('touchcancel',()=>{
+      dragging=false; bar.classList.remove('dragging');
+    });
   });
 })();
 

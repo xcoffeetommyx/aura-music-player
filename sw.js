@@ -3,7 +3,7 @@
 //  Change VERSION whenever you deploy new files.
 //  That's the only line you ever need to edit.
 // ─────────────────────────────────────────────
-const VERSION    = '1.1';
+const VERSION    = '2.0';
 const CACHE_NAME = 'aura-v' + VERSION;
 const ASSETS     = ['./index.html', './manifest.json'];
 
